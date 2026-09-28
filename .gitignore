@@ -1,0 +1,7 @@
+/barbershop
+*.exe
+*.test
+*.out
+*_templ.go
+.vscode/
+.idea/

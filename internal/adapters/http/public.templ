@@ -1,0 +1,43 @@
+package http
+
+import (
+
+    "fmt"
+	"barbershop/internal/domain"
+)
+
+templ PublicPage(services []domain.Service) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>Barbershop</title>
+			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
+			<style>
+				body { font-family: sans-serif; max-width: 640px; margin: 40px auto; }
+				.service { padding: 12px; border: 1px solid #ccc; margin: 8px 0; cursor: pointer; }
+				.total { font-size: 1.4em; font-weight: bold; margin-top: 20px; }
+			</style>
+		</head>
+		<body>
+			<div style="text-align: right;">
+				<a href="/login">Login</a>
+			</div>
+
+			<h1>Juan's Barbershop</h1>
+			<h2>Services</h2>
+
+			<form id="pick" hx-post="/pick" hx-target="#total" hx-swap="innerHTML">
+				for _, s := range services {
+					<label class="service">
+						<input type="checkbox" name="service" value={ fmt.Sprintf("%d", s.PriceCentavos) }/>
+						{ s.Name } — { domain.FormatCentavos(s.PriceCentavos) }
+					</label>
+					<br/>
+				}
+				<button type="submit">Update total</button>
+			</form>
+
+			<div id="total" class="total">Total: ₱0.00</div>
+		</body>
+	</html>
+}

@@ -5,8 +5,10 @@ import (
 	"log"
 	"net/http"
 
+	bcryptadapter "barbershop/internal/adapters/bcrypt"
 	httpadapter "barbershop/internal/adapters/http"
 	"barbershop/internal/adapters/postgres"
+	"barbershop/internal/app"
 )
 
 func main() {
@@ -18,9 +20,22 @@ func main() {
 	}
 	defer pool.Close()
 
-	// The ONLY place that wires concrete types together.
+	// Adapters (the concrete implementations of our ports).
 	serviceRepo := postgres.NewServiceRepo(pool)
-	handlers := &httpadapter.Handlers{Services: serviceRepo}
+	userRepo := postgres.NewUserRepo(pool)
+	sessionRepo := postgres.NewSessionRepo(pool)
+	hasher := bcryptadapter.NewHasher()
+
+	// Use cases (the app layer).
+	authSvc := app.NewAuthService(userRepo, hasher)
+	sessionSvc := app.NewSessionService(sessionRepo, userRepo)
+
+	// HTTP adapter.
+	handlers := &httpadapter.Handlers{
+		Services: serviceRepo,
+		Auth:     authSvc,
+		Sessions: sessionSvc,
+	}
 	router := httpadapter.NewRouter(handlers)
 
 	log.Println("listening on :8080")

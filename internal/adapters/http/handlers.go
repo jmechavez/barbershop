@@ -5,12 +5,15 @@ import (
 	"net/http"
 	"strconv"
 
+	"barbershop/internal/app"
 	"barbershop/internal/domain"
 	"barbershop/internal/ports"
 )
 
 type Handlers struct {
 	Services ports.ServiceRepository
+	Auth     *app.AuthService
+	Sessions *app.SessionService
 }
 
 func (h *Handlers) Public(w http.ResponseWriter, r *http.Request) {
@@ -38,4 +41,53 @@ func (h *Handlers) Pick(w http.ResponseWriter, r *http.Request) {
 
 	total := domain.TotalCentavos(picked)
 	fmt.Fprintf(w, "Total: %s", domain.FormatCentavos(total))
+}
+
+// LoginForm renders the login page.
+func (h *Handlers) LoginForm(w http.ResponseWriter, r *http.Request) {
+	LoginPage("").Render(r.Context(), w)
+}
+
+// LoginSubmit handles the login POST. On success it sets a session
+// cookie and redirects to /. On failure it re-renders the form with
+// an error message. The HTTP status stays 200 for form errors, so that
+// htmx or the browser renders the response instead of treating it as a
+// network-level failure.
+func (h *Handlers) LoginSubmit(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+
+	user, err := h.Auth.Authenticate(r.Context(), email, password)
+	if err != nil {
+		// Collapse all credential errors into one message.
+		// Don't tell attackers whether the email exists.
+		msg := "Invalid email or password."
+		LoginPage(msg).Render(r.Context(), w)
+		return
+	}
+
+	token, err := h.Sessions.Start(r.Context(), user.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	setSessionCookie(w, token)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// Logout deletes the current session and clears the cookie.
+func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
+	token := sessionToken(r)
+	if err := h.Sessions.Stop(r.Context(), token); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	clearSessionCookie(w)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

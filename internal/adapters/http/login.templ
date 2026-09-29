@@ -1,0 +1,39 @@
+package http
+
+templ LoginPage(errorMsg string) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>Login — Barbershop</title>
+			<style>
+				body { font-family: sans-serif; max-width: 360px; margin: 80px auto; }
+				label { display: block; margin: 12px 0; }
+				input { width: 100%; padding: 8px; box-sizing: border-box; }
+				button { padding: 8px 16px; margin-top: 12px; }
+				.error { color: #b00020; margin: 12px 0; }
+				.back { margin-top: 24px; }
+			</style>
+		</head>
+		<body>
+			<h1>Staff Login</h1>
+
+			if errorMsg != "" {
+				<p class="error">{ errorMsg }</p>
+			}
+
+			<form method="post" action="/login">
+				<label>
+					Email
+					<input type="email" name="email" required autofocus/>
+				</label>
+				<label>
+					Password
+					<input type="password" name="password" required/>
+				</label>
+				<button type="submit">Log in</button>
+			</form>
+
+			<p class="back"><a href="/">← Back to shop</a></p>
+		</body>
+	</html>
+}

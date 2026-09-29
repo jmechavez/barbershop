@@ -8,6 +8,8 @@ import (
 
 func NewRouter(h *Handlers) http.Handler {
 	r := chi.NewRouter()
+	r.Use(h.LoadUser)
+
 	r.Get("/", h.Public)
 	r.Post("/pick", h.Pick)
 	r.Get("/login", h.LoginForm)

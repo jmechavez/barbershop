@@ -96,3 +96,12 @@ func TestAuthenticate_WrongPassword(t *testing.T) {
 		t.Errorf("err = %v, want ErrInvalidPassword", err)
 	}
 }
+
+func (f *fakeUsers) FindByID(ctx context.Context, id int) (domain.User, error) {
+	for _, u := range f.byEmail {
+		if u.ID == id {
+			return u, nil
+		}
+	}
+	return domain.User{}, ports.ErrUserNotFound
+}

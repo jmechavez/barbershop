@@ -27,6 +27,7 @@ type ServiceRepository interface {
 // stored, only what the app needs to ask.
 type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
+	FindByID(ctx context.Context, id int) (domain.User, error)
 }
 
 // PasswordHasher is a driven port: the app needs to hash and verify

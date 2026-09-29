@@ -41,3 +41,22 @@ func (r *UserRepo) FindByEmail(ctx context.Context, email string) (domain.User, 
 	u.Role = domain.Role(role)
 	return u, nil
 }
+
+func (r *UserRepo) FindByID(ctx context.Context, id int) (domain.User, error) {
+	var u domain.User
+	var role string
+	err := r.DB.QueryRow(ctx,
+		`SELECT id, email, password_hash, role FROM users WHERE id = $1`,
+		id,
+	).Scan(&u.ID, &u.Email, &u.PasswordHash, &role)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.User{}, ports.ErrUserNotFound
+	}
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	u.Role = domain.Role(role)
+	return u, nil
+}

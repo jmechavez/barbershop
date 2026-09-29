@@ -1,0 +1,15 @@
+package http
+
+import "barbershop/internal/domain"
+
+templ AdminHome(user domain.User) {
+	<!DOCTYPE html>
+	<html>
+		<head><title>Admin — Barbershop</title></head>
+		<body>
+			<h1>Admin</h1>
+			<p>Signed in as { user.Email } ({ string(user.Role) })</p>
+			<p><a href="/">Back to shop</a></p>
+		</body>
+	</html>
+}

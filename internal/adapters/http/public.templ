@@ -1,12 +1,12 @@
 package http
 
 import (
+	"fmt"
 
-    "fmt"
 	"barbershop/internal/domain"
 )
 
-templ PublicPage(services []domain.Service) {
+templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 	<!DOCTYPE html>
 	<html>
 		<head>
@@ -16,11 +16,23 @@ templ PublicPage(services []domain.Service) {
 				body { font-family: sans-serif; max-width: 640px; margin: 40px auto; }
 				.service { padding: 12px; border: 1px solid #ccc; margin: 8px 0; cursor: pointer; }
 				.total { font-size: 1.4em; font-weight: bold; margin-top: 20px; }
+				.topbar { text-align: right; margin-bottom: 20px; }
+				.topbar form { display: inline; margin: 0; padding: 0; }
+				.topbar button { background: none; border: none; color: #0000ee;
+				                 text-decoration: underline; cursor: pointer;
+				                 font: inherit; padding: 0; }
 			</style>
 		</head>
 		<body>
-			<div style="text-align: right;">
-				<a href="/login">Login</a>
+			<div class="topbar">
+				if loggedIn {
+					<span>{ user.Email }</span>
+					<form method="post" action="/logout">
+						<button type="submit">Logout</button>
+					</form>
+				} else {
+					<a href="/login">Login</a>
+				}
 			</div>
 
 			<h1>Juan's Barbershop</h1>

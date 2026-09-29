@@ -22,7 +22,9 @@ func (h *Handlers) Public(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	PublicPage(services).Render(r.Context(), w)
+
+	user, loggedIn := CurrentUser(r.Context())
+	PublicPage(services, user, loggedIn).Render(r.Context(), w)
 }
 
 // Pick receives the checked prices from htmx and returns the total.
@@ -90,4 +92,9 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	clearSessionCookie(w)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (h *Handlers) AdminHomePage(w http.ResponseWriter, r *http.Request) {
+	user, _ := CurrentUser(r.Context())
+	AdminHome(user).Render(r.Context(), w)
 }

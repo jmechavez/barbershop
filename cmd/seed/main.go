@@ -9,7 +9,7 @@ import (
 
 func main() {
 	h := bcryptadapter.NewHasher()
-	hash, err := h.Hash("admin123")
+	hash, err := h.Hash("drft2026")
 	if err != nil {
 		log.Fatal(err)
 	}

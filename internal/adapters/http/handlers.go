@@ -60,12 +60,17 @@ func (h *Handlers) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 
+	fmt.Printf("DEBUG: form email=%q password=%q\n", email, password)
+
 	user, err := h.Auth.Authenticate(r.Context(), email, password)
 	if err != nil {
+		fmt.Printf("DEBUG: Authenticate failed: %v\n", err)
 		msg := "Invalid email or password."
 		LoginPage(msg).Render(r.Context(), w)
 		return
 	}
+
+	fmt.Printf("DEBUG: Authenticate OK user=%d\n", user.ID)
 
 	token, err := h.Sessions.Start(r.Context(), user.ID)
 	if err != nil {

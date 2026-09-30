@@ -21,6 +21,7 @@ func NewRouter(h *Handlers) http.Handler {
 	r.Group(func(r chi.Router) {
 		r.Use(h.RequireRole(domain.RoleAdmin))
 		r.Get("/admin", h.AdminHomePage)
+		r.Post("/admin/services/{id}/price", h.AdminUpdateServicePrice)
 	})
 
 	return r

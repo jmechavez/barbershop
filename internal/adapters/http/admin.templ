@@ -1,15 +1,78 @@
 package http
 
-import "barbershop/internal/domain"
+import (
+	"fmt"
 
-templ AdminHome(user domain.User) {
+	"barbershop/internal/domain"
+)
+
+templ AdminHome(user domain.User, services []domain.Service) {
 	<!DOCTYPE html>
 	<html>
-		<head><title>Admin — Barbershop</title></head>
+		<head>
+			<title>Admin — Barbershop</title>
+			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
+			<style>
+				body { font-family: sans-serif; max-width: 720px; margin: 40px auto; }
+				table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+				input[type=number] { width: 100px; padding: 4px; }
+			</style>
+		</head>
 		<body>
 			<h1>Admin</h1>
 			<p>Signed in as { user.Email } ({ string(user.Role) })</p>
+
+			<h2>Services</h2>
+			<table>
+				<tr>
+					<th>ID</th>
+					<th>Name</th>
+					<th>Price</th>
+					<th></th>
+				</tr>
+				for _, s := range services {
+					<tr id={ fmt.Sprintf("service-%d", s.ID) }>
+						<td>{ fmt.Sprintf("%d", s.ID) }</td>
+						<td>{ s.Name }</td>
+						<td>
+							<form hx-post={ fmt.Sprintf("/admin/services/%d/price", s.ID) }
+							      hx-target={ fmt.Sprintf("#service-%d", s.ID) }
+							      hx-swap="outerHTML">
+								<input type="number"
+								       name="price_centavos"
+								       value={ fmt.Sprintf("%d", s.PriceCentavos) }
+								       min="0"
+								       required/>
+								<button type="submit">Save</button>
+							</form>
+						</td>
+						<td>{ domain.FormatCentavos(s.PriceCentavos) }</td>
+					</tr>
+				}
+			</table>
+
 			<p><a href="/">Back to shop</a></p>
 		</body>
 	</html>
+}
+
+templ ServiceRow(s domain.Service) {
+	<tr id={ fmt.Sprintf("service-%d", s.ID) }>
+		<td>{ fmt.Sprintf("%d", s.ID) }</td>
+		<td>{ s.Name }</td>
+		<td>
+			<form hx-post={ fmt.Sprintf("/admin/services/%d/price", s.ID) }
+			      hx-target={ fmt.Sprintf("#service-%d", s.ID) }
+			      hx-swap="outerHTML">
+				<input type="number"
+				       name="price_centavos"
+				       value={ fmt.Sprintf("%d", s.PriceCentavos) }
+				       min="0"
+				       required/>
+				<button type="submit">Save</button>
+			</form>
+		</td>
+		<td>{ domain.FormatCentavos(s.PriceCentavos) }</td>
+	</tr>
 }

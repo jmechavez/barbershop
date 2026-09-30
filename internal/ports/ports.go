@@ -20,6 +20,7 @@ var (
 // The interface is owned by the consumer (ports), not the implementer.
 type ServiceRepository interface {
 	List(ctx context.Context) ([]domain.Service, error)
+	UpdatePrice(ctx context.Context, id int, priceCentavos int) error
 }
 
 // UserRepository is a driven port: the domain needs to look up users

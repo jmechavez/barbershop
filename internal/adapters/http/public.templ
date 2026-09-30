@@ -28,10 +28,10 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 				if loggedIn {
 					<span>{ user.Email }</span>
 					<form method="post" action="/logout">
-						<button type="submit">Logout</button>
+						<button type="submit"> Logout</button>
 					</form>
 				} else {
-					<a href="/login">Login</a>
+					<a href="/login"> Login</a>
 				}
 			</div>
 

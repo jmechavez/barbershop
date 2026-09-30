@@ -34,3 +34,11 @@ func (r *ServiceRepo) List(ctx context.Context) ([]domain.Service, error) {
 	}
 	return out, rows.Err()
 }
+
+func (r *ServiceRepo) UpdatePrice(ctx context.Context, id int, priceCentavos int) error {
+	_, err := r.DB.Exec(ctx,
+		`UPDATE services SET price_centavos = $1 WHERE id = $2`,
+		priceCentavos, id,
+	)
+	return err
+}

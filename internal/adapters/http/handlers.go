@@ -8,6 +8,8 @@ import (
 	"barbershop/internal/app"
 	"barbershop/internal/domain"
 	"barbershop/internal/ports"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type Handlers struct {
@@ -96,5 +98,51 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) AdminHomePage(w http.ResponseWriter, r *http.Request) {
 	user, _ := CurrentUser(r.Context())
-	AdminHome(user).Render(r.Context(), w)
+
+	services, err := h.Services.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	AdminHome(user, services).Render(r.Context(), w)
+}
+
+func (h *Handlers) AdminUpdateServicePrice(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	priceStr := r.FormValue("price_centavos")
+	price, err := strconv.Atoi(priceStr)
+	if err != nil || price < 0 {
+		http.Error(w, "bad price", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Services.UpdatePrice(r.Context(), id, price); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch the updated service and render just its row.
+	services, err := h.Services.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, s := range services {
+		if s.ID == id {
+			ServiceRow(s).Render(r.Context(), w)
+			return
+		}
+	}
+	http.Error(w, "not found", http.StatusNotFound)
 }

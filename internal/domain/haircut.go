@@ -20,10 +20,32 @@ type Payment struct {
 }
 
 type Haircut struct {
-	ID            int
-	BarberID      int
-	ServiceID     int
-	PriceCentavos int
-	Payments      []Payment
-	CreatedAt     time.Time
+	ID               int
+	BarberID         int
+	ServiceID        int
+	PriceCentavos    int
+	DiscountCentavos int
+	NetCentavos      int
+	DiscountReason   string
+	Payments         []Payment
+	CreatedAt        time.Time
+}
+
+// NewHaircut builds a haircut with price, discount, and net set consistently.
+func NewHaircut(barberID, serviceID, priceCentavos, discountCentavos int, reason string, payments []Payment) Haircut {
+	if discountCentavos < 0 {
+		discountCentavos = 0
+	}
+	if discountCentavos > priceCentavos {
+		discountCentavos = priceCentavos
+	}
+	return Haircut{
+		BarberID:         barberID,
+		ServiceID:        serviceID,
+		PriceCentavos:    priceCentavos,
+		DiscountCentavos: discountCentavos,
+		NetCentavos:      priceCentavos - discountCentavos,
+		DiscountReason:   reason,
+		Payments:         payments,
+	}
 }

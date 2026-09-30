@@ -33,12 +33,16 @@ func NewHaircutService(haircuts ports.HaircutRepository, services ports.ServiceR
 //
 // The price is copied from the service at the moment of the cut, so
 // later price changes don't rewrite history.
-func (s *HaircutService) Record(ctx context.Context, barberID int, serviceID int, payments []domain.Payment) (domain.Haircut, error) {
-	if len(payments) == 0 {
-		return domain.Haircut{}, ErrNoPayments
-	}
+func (s *HaircutService) Record(
+	ctx context.Context,
+	barberID int,
+	serviceID int,
+	discountCentavos int,
+	discountReason string,
+	payments []domain.Payment,
+) (domain.Haircut, error) {
 
-	// Fetch the service to get the current price.
+	// Fetch the service.
 	services, err := s.Services.List(ctx)
 	if err != nil {
 		return domain.Haircut{}, err
@@ -56,8 +60,10 @@ func (s *HaircutService) Record(ctx context.Context, barberID int, serviceID int
 		return domain.Haircut{}, errors.New("service not found")
 	}
 
-	// Validate that payments sum to the price.
-	total := 0
+	// Build the haircut with computed net.
+	h := domain.NewHaircut(barberID, serviceID, svc.PriceCentavos, discountCentavos, discountReason, payments)
+
+	// Validate payments.
 	for _, p := range payments {
 		if !p.Method.Valid() {
 			return domain.Haircut{}, errors.New("invalid payment method")
@@ -65,19 +71,28 @@ func (s *HaircutService) Record(ctx context.Context, barberID int, serviceID int
 		if p.AmountCentavos <= 0 {
 			return domain.Haircut{}, errors.New("payment amount must be positive")
 		}
-		total += p.AmountCentavos
-	}
-	if total != svc.PriceCentavos {
-		return domain.Haircut{}, ErrPaymentsDoNotMatch
 	}
 
-	// Build and persist the haircut.
-	h := domain.Haircut{
-		BarberID:      barberID,
-		ServiceID:     serviceID,
-		PriceCentavos: svc.PriceCentavos,
-		Payments:      payments,
+	totalPaid := 0
+	for _, p := range payments {
+		totalPaid += p.AmountCentavos
 	}
+
+	// A free haircut (net = 0) must have zero payments.
+	// Any other haircut must have payments summing to net.
+	if h.NetCentavos == 0 {
+		if totalPaid != 0 {
+			return domain.Haircut{}, errors.New("free haircut should have no payments")
+		}
+	} else {
+		if len(payments) == 0 {
+			return domain.Haircut{}, ErrNoPayments
+		}
+		if totalPaid != h.NetCentavos {
+			return domain.Haircut{}, ErrPaymentsDoNotMatch
+		}
+	}
+
 	return s.Haircuts.Create(ctx, h)
 }
 

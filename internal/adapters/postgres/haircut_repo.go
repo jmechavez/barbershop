@@ -23,20 +23,20 @@ func (r *HaircutRepo) Create(ctx context.Context, h domain.Haircut) (domain.Hair
 	if err != nil {
 		return domain.Haircut{}, err
 	}
-	defer tx.Rollback(ctx) // safe: no-op if already committed
+	defer tx.Rollback(ctx)
 
-	// 1. Insert the haircut.
 	err = tx.QueryRow(ctx,
-		`INSERT INTO haircuts (barber_id, service_id, price_centavos)
-		 VALUES ($1, $2, $3)
+		`INSERT INTO haircuts
+		 (barber_id, service_id, price_centavos, discount_centavos, net_centavos, discount_reason)
+		 VALUES ($1, $2, $3, $4, $5, $6)
 		 RETURNING id, created_at`,
 		h.BarberID, h.ServiceID, h.PriceCentavos,
+		h.DiscountCentavos, h.NetCentavos, h.DiscountReason,
 	).Scan(&h.ID, &h.CreatedAt)
 	if err != nil {
 		return domain.Haircut{}, err
 	}
 
-	// 2. Insert each payment.
 	for i := range h.Payments {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO payments (haircut_id, method, amount_centavos)
@@ -48,7 +48,6 @@ func (r *HaircutRepo) Create(ctx context.Context, h domain.Haircut) (domain.Hair
 		}
 	}
 
-	// 3. Commit.
 	if err := tx.Commit(ctx); err != nil {
 		return domain.Haircut{}, err
 	}
@@ -58,7 +57,8 @@ func (r *HaircutRepo) Create(ctx context.Context, h domain.Haircut) (domain.Hair
 
 func (r *HaircutRepo) ListByBarber(ctx context.Context, barberID int, since time.Time) ([]domain.Haircut, error) {
 	rows, err := r.DB.Query(ctx,
-		`SELECT id, barber_id, service_id, price_centavos, created_at
+		`SELECT id, barber_id, service_id, price_centavos,
+		        discount_centavos, net_centavos, discount_reason, created_at
 		 FROM haircuts
 		 WHERE barber_id = $1 AND created_at >= $2
 		 ORDER BY created_at DESC`,
@@ -72,7 +72,10 @@ func (r *HaircutRepo) ListByBarber(ctx context.Context, barberID int, since time
 	var out []domain.Haircut
 	for rows.Next() {
 		var h domain.Haircut
-		if err := rows.Scan(&h.ID, &h.BarberID, &h.ServiceID, &h.PriceCentavos, &h.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&h.ID, &h.BarberID, &h.ServiceID, &h.PriceCentavos,
+			&h.DiscountCentavos, &h.NetCentavos, &h.DiscountReason, &h.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		out = append(out, h)
@@ -81,7 +84,6 @@ func (r *HaircutRepo) ListByBarber(ctx context.Context, barberID int, since time
 		return nil, err
 	}
 
-	// For each haircut, load its payments.
 	for i := range out {
 		payments, err := r.loadPayments(ctx, out[i].ID)
 		if err != nil {
@@ -95,7 +97,8 @@ func (r *HaircutRepo) ListByBarber(ctx context.Context, barberID int, since time
 
 func (r *HaircutRepo) ListAll(ctx context.Context, since time.Time) ([]domain.Haircut, error) {
 	rows, err := r.DB.Query(ctx,
-		`SELECT id, barber_id, service_id, price_centavos, created_at
+		`SELECT id, barber_id, service_id, price_centavos,
+		        discount_centavos, net_centavos, discount_reason, created_at
 		 FROM haircuts
 		 WHERE created_at >= $1
 		 ORDER BY created_at DESC`,
@@ -109,7 +112,10 @@ func (r *HaircutRepo) ListAll(ctx context.Context, since time.Time) ([]domain.Ha
 	var out []domain.Haircut
 	for rows.Next() {
 		var h domain.Haircut
-		if err := rows.Scan(&h.ID, &h.BarberID, &h.ServiceID, &h.PriceCentavos, &h.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&h.ID, &h.BarberID, &h.ServiceID, &h.PriceCentavos,
+			&h.DiscountCentavos, &h.NetCentavos, &h.DiscountReason, &h.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		out = append(out, h)

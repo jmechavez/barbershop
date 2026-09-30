@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -220,4 +221,130 @@ func (h *Handlers) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+func (h *Handlers) CounterHome(w http.ResponseWriter, r *http.Request) {
+	h.renderCounter(w, r, "")
+}
+
+// renderCounter is the shared body of GET /counter and of the POST
+// handler's failure path: build the page data and render it.
+func (h *Handlers) renderCounter(w http.ResponseWriter, r *http.Request, errorMsg string) {
+	admin, _ := CurrentUser(r.Context())
+
+	// Fetch all users, filter to barbers.
+	allUsers, err := h.Users.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var barbers []domain.User
+	barberName := map[int]string{}
+	for _, u := range allUsers {
+		if u.Role == domain.RoleBarber {
+			barbers = append(barbers, u)
+			barberName[u.ID] = u.FullName
+		}
+	}
+
+	// Fetch services.
+	services, err := h.Services.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	serviceName := map[int]string{}
+	for _, s := range services {
+		serviceName[s.ID] = s.Name
+	}
+
+	// Fetch today's haircuts.
+	haircuts, err := h.Haircuts.TodayAll(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	CounterPage(admin, barbers, services, haircuts, barberName, serviceName, errorMsg).Render(r.Context(), w)
+}
+
+func (h *Handlers) CounterRecordHaircut(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+
+	barberID, err := strconv.Atoi(r.FormValue("barber_id"))
+	if err != nil {
+		http.Error(w, "bad barber", http.StatusBadRequest)
+		return
+	}
+
+	serviceID, err := strconv.Atoi(r.FormValue("service_id"))
+	if err != nil {
+		http.Error(w, "bad service", http.StatusBadRequest)
+		return
+	}
+
+	// Discount (optional, in pesos)
+	discountPesos := 0
+	if s := r.FormValue("discount_pesos"); s != "" {
+		discountPesos, err = strconv.Atoi(s)
+		if err != nil || discountPesos < 0 {
+			h.renderCounter(w, r, "invalid discount")
+			return
+		}
+	}
+	discountCentavos := discountPesos * 100
+	discountReason := r.FormValue("discount_reason")
+
+	// Payments
+	payments, err := parsePayments(r)
+	if err != nil {
+		h.renderCounter(w, r, err.Error())
+		return
+	}
+
+	// Record.
+	if _, err := h.Haircuts.Record(r.Context(), barberID, serviceID, discountCentavos, discountReason, payments); err != nil {
+		h.renderCounter(w, r, err.Error())
+		return
+	}
+
+	http.Redirect(w, r, "/counter", http.StatusSeeOther)
+}
+
+// parsePayments reads pay_gcash, pay_maribank, pay_cash from the form.
+// Each is a whole-peso amount. Zero amounts are skipped. Any non-zero
+// amount becomes a domain.Payment.
+func parsePayments(r *http.Request) ([]domain.Payment, error) {
+	type entry struct {
+		field  string
+		method domain.PaymentMethod
+	}
+	fields := []entry{
+		{"pay_gcash", domain.PaymentGCash},
+		{"pay_maribank", domain.PaymentMaribank},
+		{"pay_cash", domain.PaymentCash},
+	}
+
+	var out []domain.Payment
+	for _, e := range fields {
+		str := r.FormValue(e.field)
+		if str == "" {
+			continue
+		}
+		pesos, err := strconv.Atoi(str)
+		if err != nil || pesos < 0 {
+			return nil, errors.New("invalid payment amount")
+		}
+		if pesos == 0 {
+			continue
+		}
+		out = append(out, domain.Payment{
+			Method:         e.method,
+			AmountCentavos: pesos * 100,
+		})
+	}
+	return out, nil
 }

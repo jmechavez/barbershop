@@ -16,6 +16,7 @@ func NewAuthService(users ports.UserRepository, hasher ports.PasswordHasher) *Au
 	return &AuthService{Users: users, Hasher: hasher}
 }
 
+// Authenticate looks up the user by email and verifies the password.
 func (s *AuthService) Authenticate(ctx context.Context, email, password string) (domain.User, error) {
 	user, err := s.Users.FindByEmail(ctx, email)
 	if err != nil {
@@ -30,12 +31,11 @@ func (s *AuthService) Authenticate(ctx context.Context, email, password string) 
 }
 
 // CreateUser creates a new user with the given role, hashing the
-// password before storing it. The caller is responsible for ensuring
-// the email is unique and the role is valid.
-func (s *AuthService) CreateUser(ctx context.Context, email, password string, role domain.Role) (domain.User, error) {
+// password before storing it.
+func (s *AuthService) CreateUser(ctx context.Context, email string, fullName string, password string, role domain.Role, dailyFloorCentavos int) (domain.User, error) {
 	hash, err := s.Hasher.Hash(password)
 	if err != nil {
 		return domain.User{}, err
 	}
-	return s.Users.Create(ctx, email, hash, role)
+	return s.Users.Create(ctx, email, fullName, hash, role, dailyFloorCentavos)
 }

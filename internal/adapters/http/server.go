@@ -1,8 +1,9 @@
 package http
 
 import (
-	"barbershop/internal/domain"
 	"net/http"
+
+	"barbershop/internal/domain"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -11,6 +12,7 @@ func NewRouter(h *Handlers) http.Handler {
 	r := chi.NewRouter()
 	r.Use(h.LoadUser)
 
+	// Public routes
 	r.Get("/", h.Public)
 	r.Post("/pick", h.Pick)
 	r.Get("/login", h.LoginForm)
@@ -24,13 +26,6 @@ func NewRouter(h *Handlers) http.Handler {
 		r.Post("/admin/services", h.AdminCreateService)
 		r.Post("/admin/services/{id}", h.AdminUpdateService)
 		r.Post("/admin/users", h.AdminCreateUser)
-
-	})
-
-	// Barber area
-	r.Group(func(r chi.Router) {
-		r.Use(h.RequireLogin)
-		r.Get("/barber", h.BarberHome)
 	})
 
 	return r

@@ -2,6 +2,10 @@ package domain
 
 import "strings"
 
+// CommissionPercent is the shop-wide commission a barber earns
+// on each haircut. E.g. 50 means the barber keeps 50% of the price.
+const CommissionPercent = 50
+
 // Role is a user's role in the system. Only two exist.
 type Role string
 
@@ -18,10 +22,12 @@ func (r Role) Valid() bool {
 // User is a staff account (admin or barber).
 // Never holds a plaintext password — only the hash.
 type User struct {
-	ID           int
-	Email        string
-	PasswordHash string
-	Role         Role
+	ID                 int
+	Email              string
+	FullName           string
+	PasswordHash       string
+	Role               Role
+	DailyFloorCentavos int
 }
 
 // NormalizeEmail lowercases and trims an email so that

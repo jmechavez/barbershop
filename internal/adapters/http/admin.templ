@@ -23,27 +23,36 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 		</head>
 		<body>
 			<h1>Admin</h1>
-			<p>Signed in as { user.Email } ({ string(user.Role) })</p>
+			<p>Signed in as { user.FullName } ({ user.Email }) — { string(user.Role) }</p>
 
 			<section>
 				<h2>Staff</h2>
 				<table>
 					<tr>
 						<th style="width: 40px;">ID</th>
+						<th>Name</th>
 						<th>Email</th>
 						<th style="width: 100px;">Role</th>
+						<th style="width: 130px;">Daily floor</th>
 					</tr>
 					for _, u := range users {
 						<tr>
 							<td>{ fmt.Sprintf("%d", u.ID) }</td>
+							<td>{ u.FullName }</td>
 							<td>{ u.Email }</td>
 							<td>{ string(u.Role) }</td>
+							<td>{ domain.FormatCentavos(u.DailyFloorCentavos) }</td>
 						</tr>
 					}
 				</table>
 
 				<h3>Add a staff account</h3>
 				<form method="post" action="/admin/users">
+					<label>
+						Full name
+						<input type="text" name="full_name" required
+						       style="width: 200px; box-sizing: border-box; padding: 4px;"/>
+					</label>
 					<label>
 						Email
 						<input type="email" name="email" required
@@ -60,6 +69,11 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 							<option value="barber">barber</option>
 							<option value="admin">admin</option>
 						</select>
+					</label>
+					<label>
+						Daily floor (pesos)
+						<input type="number" name="daily_floor_pesos" min="0" value="500" required
+						       style="width: 90px; padding: 4px;"/>
 					</label>
 					<button type="submit">Create</button>
 				</form>
@@ -120,7 +134,7 @@ templ ServiceRow(s domain.Service) {
 			       step="1"
 			       required/>
 		</td>
-		<td>{ domain.FormatCentavos(s.PriceCentavos) }</td>
+		<td>{ s.FormatPrice() }</td>
 		<td>
 			<form id={ fmt.Sprintf("form-%d", s.ID) }
 			      hx-post={ fmt.Sprintf("/admin/services/%d", s.ID) }

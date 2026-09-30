@@ -31,8 +31,6 @@ func (h *Handlers) Public(w http.ResponseWriter, r *http.Request) {
 	PublicPage(services, user, loggedIn).Render(r.Context(), w)
 }
 
-// Pick receives the checked prices from htmx and returns the total.
-// It calls domain.TotalCentavos — the HTTP layer does not do math.
 func (h *Handlers) Pick(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -49,16 +47,10 @@ func (h *Handlers) Pick(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Total: %s", domain.FormatCentavos(total))
 }
 
-// LoginForm renders the login page.
 func (h *Handlers) LoginForm(w http.ResponseWriter, r *http.Request) {
 	LoginPage("").Render(r.Context(), w)
 }
 
-// LoginSubmit handles the login POST. On success it sets a session
-// cookie and redirects to /. On failure it re-renders the form with
-// an error message. The HTTP status stays 200 for form errors, so that
-// htmx or the browser renders the response instead of treating it as a
-// network-level failure.
 func (h *Handlers) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad form", http.StatusBadRequest)
@@ -70,8 +62,6 @@ func (h *Handlers) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.Auth.Authenticate(r.Context(), email, password)
 	if err != nil {
-		// Collapse all credential errors into one message.
-		// Don't tell attackers whether the email exists.
 		msg := "Invalid email or password."
 		LoginPage(msg).Render(r.Context(), w)
 		return
@@ -87,7 +77,6 @@ func (h *Handlers) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-// Logout deletes the current session and clears the cookie.
 func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	token := sessionToken(r)
 	if err := h.Sessions.Stop(r.Context(), token); err != nil {
@@ -148,7 +137,6 @@ func (h *Handlers) AdminUpdateService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Re-fetch and render just this row.
 	services, err := h.Services.List(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -198,11 +186,13 @@ func (h *Handlers) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	email := r.FormValue("email")
+	fullName := r.FormValue("full_name")
 	password := r.FormValue("password")
 	roleStr := r.FormValue("role")
+	floorStr := r.FormValue("daily_floor_pesos")
 
-	if email == "" || password == "" {
-		http.Error(w, "email and password required", http.StatusBadRequest)
+	if email == "" || fullName == "" || password == "" {
+		http.Error(w, "email, full name and password required", http.StatusBadRequest)
 		return
 	}
 
@@ -212,38 +202,17 @@ func (h *Handlers) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.Auth.CreateUser(r.Context(), email, password, role); err != nil {
+	floorPesos, err := strconv.Atoi(floorStr)
+	if err != nil || floorPesos < 0 {
+		http.Error(w, "bad floor", http.StatusBadRequest)
+		return
+	}
+	floorCentavos := floorPesos * 100
+
+	if _, err := h.Auth.CreateUser(r.Context(), email, fullName, password, role, floorCentavos); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
-}
-
-func (h *Handlers) BarberHome(w http.ResponseWriter, r *http.Request) {
-	user, ok := CurrentUser(r.Context())
-	if !ok {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	services, err := h.Services.List(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	haircuts, err := h.Haircuts.Today(r.Context(), user.ID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Build a map of service ID -> name so the template can show names.
-	serviceName := make(map[int]string, len(services))
-	for _, s := range services {
-		serviceName[s.ID] = s.Name
-	}
-
-	BarberPage(user, services, haircuts, serviceName, "").Render(r.Context(), w)
 }

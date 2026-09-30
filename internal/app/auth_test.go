@@ -9,7 +9,6 @@ import (
 	"barbershop/internal/ports"
 )
 
-// fakeUsers is a test double for ports.UserRepository.
 type fakeUsers struct {
 	byEmail map[string]domain.User
 }
@@ -22,11 +21,38 @@ func (f *fakeUsers) FindByEmail(ctx context.Context, email string) (domain.User,
 	return u, nil
 }
 
-// fakeHasher is a test double for ports.PasswordHasher.
-// It does NOT hash — it just compares strings directly.
-// That's fine for a test double; we're testing the use case, not bcrypt.
+func (f *fakeUsers) FindByID(ctx context.Context, id int) (domain.User, error) {
+	for _, u := range f.byEmail {
+		if u.ID == id {
+			return u, nil
+		}
+	}
+	return domain.User{}, ports.ErrUserNotFound
+}
+
+func (f *fakeUsers) List(ctx context.Context) ([]domain.User, error) {
+	var out []domain.User
+	for _, u := range f.byEmail {
+		out = append(out, u)
+	}
+	return out, nil
+}
+
+func (f *fakeUsers) Create(ctx context.Context, email string, fullName string, passwordHash string, role domain.Role, dailyFloorCentavos int) (domain.User, error) {
+	u := domain.User{
+		ID:                 len(f.byEmail) + 1,
+		Email:              email,
+		FullName:           fullName,
+		PasswordHash:       passwordHash,
+		Role:               role,
+		DailyFloorCentavos: dailyFloorCentavos,
+	}
+	f.byEmail[email] = u
+	return u, nil
+}
+
 type fakeHasher struct {
-	validPasswords map[string]string // hash -> plaintext
+	validPasswords map[string]string
 }
 
 func (f *fakeHasher) Hash(plain string) (string, error) {
@@ -45,6 +71,7 @@ func TestAuthenticate_Success(t *testing.T) {
 		"juan@shop.ph": {
 			ID:           1,
 			Email:        "juan@shop.ph",
+			FullName:     "Juan Dela Cruz",
 			PasswordHash: "hashed-secret",
 			Role:         domain.RoleBarber,
 		},
@@ -81,6 +108,7 @@ func TestAuthenticate_WrongPassword(t *testing.T) {
 		"juan@shop.ph": {
 			ID:           1,
 			Email:        "juan@shop.ph",
+			FullName:     "Juan Dela Cruz",
 			PasswordHash: "hashed-secret",
 			Role:         domain.RoleBarber,
 		},
@@ -95,27 +123,4 @@ func TestAuthenticate_WrongPassword(t *testing.T) {
 	if !errors.Is(err, ports.ErrInvalidPassword) {
 		t.Errorf("err = %v, want ErrInvalidPassword", err)
 	}
-}
-
-func (f *fakeUsers) FindByID(ctx context.Context, id int) (domain.User, error) {
-	for _, u := range f.byEmail {
-		if u.ID == id {
-			return u, nil
-		}
-	}
-	return domain.User{}, ports.ErrUserNotFound
-}
-
-func (f *fakeUsers) Create(ctx context.Context, email string, passwordHash string, role domain.Role) (domain.User, error) {
-	u := domain.User{ID: len(f.byEmail) + 1, Email: email, PasswordHash: passwordHash, Role: role}
-	f.byEmail[email] = u
-	return u, nil
-}
-
-func (f *fakeUsers) List(ctx context.Context) ([]domain.User, error) {
-	var out []domain.User
-	for _, u := range f.byEmail {
-		out = append(out, u)
-	}
-	return out, nil
 }

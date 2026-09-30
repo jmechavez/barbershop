@@ -27,5 +27,11 @@ func NewRouter(h *Handlers) http.Handler {
 
 	})
 
+	// Barber area
+	r.Group(func(r chi.Router) {
+		r.Use(h.RequireLogin)
+		r.Get("/barber", h.BarberHome)
+	})
+
 	return r
 }

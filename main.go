@@ -30,10 +30,15 @@ func main() {
 	authSvc := app.NewAuthService(userRepo, hasher)
 	sessionSvc := app.NewSessionService(sessionRepo, userRepo)
 
+	// Haircut service
+	haircutRepo := postgres.NewHaircutRepo(pool)
+	haircutSvc := app.NewHaircutService(haircutRepo, serviceRepo)
+
 	// HTTP adapter.
 	handlers := &httpadapter.Handlers{
 		Services: serviceRepo,
 		Users:    userRepo,
+		Haircuts: haircutSvc,
 		Auth:     authSvc,
 		Sessions: sessionSvc,
 	}

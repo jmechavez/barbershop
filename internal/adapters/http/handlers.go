@@ -15,6 +15,7 @@ import (
 type Handlers struct {
 	Services ports.ServiceRepository
 	Users    ports.UserRepository
+	Haircuts *app.HaircutService
 	Auth     *app.AuthService
 	Sessions *app.SessionService
 }
@@ -217,4 +218,32 @@ func (h *Handlers) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+func (h *Handlers) BarberHome(w http.ResponseWriter, r *http.Request) {
+	user, ok := CurrentUser(r.Context())
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	services, err := h.Services.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	haircuts, err := h.Haircuts.Today(r.Context(), user.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Build a map of service ID -> name so the template can show names.
+	serviceName := make(map[int]string, len(services))
+	for _, s := range services {
+		serviceName[s.ID] = s.Name
+	}
+
+	BarberPage(user, services, haircuts, serviceName, "").Render(r.Context(), w)
 }

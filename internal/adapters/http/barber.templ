@@ -1,0 +1,103 @@
+package http
+
+import (
+	"fmt"
+
+	"barbershop/internal/domain"
+)
+
+templ BarberPage(user domain.User, services []domain.Service, haircuts []domain.Haircut, serviceName map[int]string, errorMsg string) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>Barber — Barbershop</title>
+			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
+			<style>
+				body { font-family: sans-serif; max-width: 720px; margin: 40px auto; }
+				.topbar { text-align: right; margin-bottom: 20px; }
+				.topbar form { display: inline; margin: 0; padding: 0; }
+				.topbar button { background: none; border: none; color: #0000ee;
+				                 text-decoration: underline; cursor: pointer;
+				                 font: inherit; padding: 0; }
+				table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: middle; }
+				.error { color: #b00020; margin: 12px 0; }
+				.pay { display: flex; gap: 12px; align-items: center; margin: 6px 0; }
+				.pay label { display: flex; gap: 6px; align-items: center; }
+				.pay input { width: 90px; padding: 4px; }
+			</style>
+		</head>
+		<body>
+			<div class="topbar">
+				<span>{ user.Email }</span>
+				<form method="post" action="/logout">
+					<button type="submit">Logout</button>
+				</form>
+			</div>
+
+			<h1>Barber</h1>
+			<p>Hello, { user.Email }.</p>
+
+			<h2>Record a haircut</h2>
+
+			if errorMsg != "" {
+				<p class="error">{ errorMsg }</p>
+			}
+
+			<form method="post" action="/barber/haircuts">
+				<label>
+					Service
+					<select name="service_id" required>
+						for _, s := range services {
+							<option value={ fmt.Sprintf("%d", s.ID) }>
+								{ s.Name } — { s.FormatPrice() }
+							</option>
+						}
+					</select>
+				</label>
+
+				<p>Payment (fill in what was paid — one or more):</p>
+
+				<div class="pay">
+					<label>GCash <input type="number" name="pay_gcash" min="0" step="1" value="0"/></label>
+					<label>Maribank <input type="number" name="pay_maribank" min="0" step="1" value="0"/></label>
+					<label>Cash <input type="number" name="pay_cash" min="0" step="1" value="0"/></label>
+				</div>
+
+				<button type="submit">Record</button>
+			</form>
+
+			<h2>Today</h2>
+
+			if len(haircuts) == 0 {
+				<p>No haircuts recorded yet today.</p>
+			} else {
+				<table>
+					<tr>
+						<th>Time</th>
+						<th>Service</th>
+						<th>Price</th>
+						<th>Payments</th>
+					</tr>
+					for _, h := range haircuts {
+						<tr>
+							<td>{ h.CreatedAt.Format("15:04") }</td>
+							<td>{ serviceName[h.ServiceID] }</td>
+							<td>{ domain.FormatCentavos(h.PriceCentavos) }</td>
+							<td>
+								for i, p := range h.Payments {
+									if i > 0 {
+										<br/>
+									}
+									{ string(p.Method) }: { domain.FormatCentavos(p.AmountCentavos) }
+								}
+							</td>
+						</tr>
+					}
+				</table>
+			}
+
+			<p style="margin-top: 32px;"><a href="/">Back to shop</a></p>
+		</body>
+	</html>
+}

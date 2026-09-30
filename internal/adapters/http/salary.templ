@@ -1,0 +1,90 @@
+package http
+
+import (
+	"fmt"
+
+	"barbershop/internal/domain"
+)
+
+templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string, toStr string) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>Salary — Barbershop</title>
+			<style>
+				body { font-family: sans-serif; max-width: 900px; margin: 40px auto; }
+				.topbar { text-align: right; margin-bottom: 20px; }
+				.topbar form { display: inline; margin: 0; padding: 0; }
+				.topbar button { background: none; border: none; color: #0000ee;
+				                 text-decoration: underline; cursor: pointer;
+				                 font: inherit; padding: 0; }
+				table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: middle; }
+				th { background: #f4f4f4; }
+				small { color: #666; }
+				.totals { margin-top: 24px; padding: 16px; background: #f9f9f9; border: 1px solid #ddd; }
+				.totals div { margin: 6px 0; font-size: 1.05em; }
+				.totals .take-home { font-size: 1.3em; font-weight: bold; margin-top: 12px; }
+			</style>
+		</head>
+		<body>
+			<div class="topbar">
+				<span>{ user.FullName }</span>
+				<form method="post" action="/logout">
+					<button type="submit">Logout</button>
+				</form>
+			</div>
+
+			<h1>Salary</h1>
+			<p><a href="/me">← Back to my page</a></p>
+
+			<form method="get" action="/me/salary">
+				<label>
+					From
+					<input type="date" name="from" value={ fromStr } required/>
+				</label>
+				<label style="margin-left: 12px;">
+					To
+					<input type="date" name="to" value={ toStr } required/>
+				</label>
+				<button type="submit" style="margin-left: 12px;">Show</button>
+			</form>
+
+			if len(summary.Days) == 0 {
+				<p style="margin-top: 24px;">No working days in this range.</p>
+			} else {
+				<table>
+					<tr>
+						<th style="width: 140px;">Date</th>
+						<th style="width: 60px;">Cuts</th>
+						<th style="width: 110px;">List total</th>
+						<th style="width: 110px;">Commission</th>
+						<th style="width: 120px;">Paid</th>
+					</tr>
+					for _, d := range summary.Days {
+						<tr>
+							<td>{ d.Date.Format("Mon, Jan 2") }</td>
+							<td>{ fmt.Sprintf("%d", d.HaircutCount) }</td>
+							<td>{ domain.FormatCentavos(d.ListTotal) }</td>
+							<td>{ domain.FormatCentavos(d.Commission) }</td>
+							<td>
+								{ domain.FormatCentavos(d.Paid) }
+								if d.FloorApplied {
+									<br/><small>(minimum)</small>
+								}
+							</td>
+						</tr>
+					}
+				</table>
+
+				<div class="totals">
+					<div>Gross salary: <strong>{ domain.FormatCentavos(summary.GrossSalary) }</strong></div>
+					<div>Cash advances: <strong>− { domain.FormatCentavos(summary.AdvancesTotal) }</strong></div>
+					<div class="take-home">Take home: { domain.FormatCentavos(summary.TakeHome) }</div>
+				</div>
+			}
+
+			<p style="margin-top: 32px;"><a href="/">Back to shop</a></p>
+		</body>
+	</html>
+}

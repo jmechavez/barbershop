@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"barbershop/internal/app"
 	"barbershop/internal/domain"
@@ -18,6 +19,7 @@ type Handlers struct {
 	Users        ports.UserRepository
 	Haircuts     *app.HaircutService
 	CashAdvances *app.CashAdvanceService
+	Salary       *app.SalaryService
 	Auth         *app.AuthService
 	Sessions     *app.SessionService
 }
@@ -429,4 +431,59 @@ func (h *Handlers) AdminCreateCashAdvance(w http.ResponseWriter, r *http.Request
 	}
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+func (h *Handlers) MeSalaryPage(w http.ResponseWriter, r *http.Request) {
+	user, ok := CurrentUser(r.Context())
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Only barbers have a salary.
+	if user.Role != domain.RoleBarber {
+		http.Error(w, "salary is for barbers only", http.StatusForbidden)
+		return
+	}
+
+	// Read date range from query string.
+	fromStr := r.URL.Query().Get("from")
+	toStr := r.URL.Query().Get("to")
+
+	// Default: first day of current month to today.
+	now := time.Now()
+	if fromStr == "" {
+		fromStr = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+	}
+	if toStr == "" {
+		toStr = now.Format("2006-01-02")
+	}
+
+	from, err := time.ParseInLocation("2006-01-02", fromStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad from date", http.StatusBadRequest)
+		return
+	}
+	to, err := time.ParseInLocation("2006-01-02", toStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad to date", http.StatusBadRequest)
+		return
+	}
+	if to.Before(from) {
+		http.Error(w, "to date is before from date", http.StatusBadRequest)
+		return
+	}
+
+	// The salary range is inclusive of the `to` date.
+	// We pass `to` as midnight of the day *after*, because the SQL
+	// query uses created_at < to.
+	toExclusive := to.AddDate(0, 0, 1)
+
+	summary, err := h.Salary.ForRange(r.Context(), user.ID, from, toExclusive)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	SalaryPage(user, summary, fromStr, toStr).Render(r.Context(), w)
 }

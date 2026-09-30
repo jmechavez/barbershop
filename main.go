@@ -33,6 +33,7 @@ func main() {
 	sessionSvc := app.NewSessionService(sessionRepo, userRepo)
 	haircutSvc := app.NewHaircutService(haircutRepo, serviceRepo)
 	cashAdvanceSvc := app.NewCashAdvanceService(cashAdvanceRepo)
+	salarySvc := app.NewSalaryService(haircutRepo, cashAdvanceRepo, userRepo)
 
 	// HTTP adapter
 	handlers := &httpadapter.Handlers{
@@ -42,6 +43,7 @@ func main() {
 		CashAdvances: cashAdvanceSvc,
 		Auth:         authSvc,
 		Sessions:     sessionSvc,
+		Salary:       salarySvc,
 	}
 	router := httpadapter.NewRouter(handlers)
 

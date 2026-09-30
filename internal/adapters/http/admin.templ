@@ -34,7 +34,7 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 						<th>Name</th>
 						<th>Email</th>
 						<th style="width: 100px;">Role</th>
-						<th style="width: 130px;">Daily floor</th>
+						<th style="width: 130px;">Daily minimum</th>
 					</tr>
 					for _, u := range users {
 						<tr>
@@ -72,7 +72,7 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 						</select>
 					</label>
 					<label>
-						Daily floor (pesos)
+						Daily minimum (pesos)
 						<input type="number" name="daily_floor_pesos" min="0" value="500" required
 						       style="width: 90px; padding: 4px;"/>
 					</label>

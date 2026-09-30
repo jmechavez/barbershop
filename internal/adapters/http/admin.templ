@@ -6,7 +6,7 @@ import (
 	"barbershop/internal/domain"
 )
 
-templ AdminHome(user domain.User, services []domain.Service) {
+templ AdminHome(user domain.User, services []domain.Service, users []domain.User) {
 	<!DOCTYPE html>
 	<html>
 		<head>
@@ -16,42 +16,85 @@ templ AdminHome(user domain.User, services []domain.Service) {
 				body { font-family: sans-serif; max-width: 900px; margin: 40px auto; }
 				table { border-collapse: collapse; width: 100%; margin-top: 16px; }
 				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: middle; }
-				input[type=text] { width: 100%; box-sizing: border-box; padding: 4px; }
+				input[type=text], input[type=email], input[type=password] { width: 100%; box-sizing: border-box; padding: 4px; }
 				input[type=number] { width: 90px; padding: 4px; }
+				section { margin-top: 32px; }
 			</style>
 		</head>
 		<body>
 			<h1>Admin</h1>
 			<p>Signed in as { user.Email } ({ string(user.Role) })</p>
 
-			<h2>Services</h2>
-			<table>
-				<tr>
-					<th style="width: 40px;">ID</th>
-					<th>Name</th>
-					<th style="width: 120px;">Price</th>
-					<th style="width: 120px;">Formatted</th>
-					<th style="width: 90px;"></th>
-				</tr>
-				for _, s := range services {
-					@ServiceRow(s)
-				}
-			</table>
+			<section>
+				<h2>Staff</h2>
+				<table>
+					<tr>
+						<th style="width: 40px;">ID</th>
+						<th>Email</th>
+						<th style="width: 100px;">Role</th>
+					</tr>
+					for _, u := range users {
+						<tr>
+							<td>{ fmt.Sprintf("%d", u.ID) }</td>
+							<td>{ u.Email }</td>
+							<td>{ string(u.Role) }</td>
+						</tr>
+					}
+				</table>
 
-			<h2>Add a service</h2>
-			<form method="post" action="/admin/services">
-				<label>
-					Name
-					<input type="text" name="name" required
-					       style="width: 200px; box-sizing: border-box; padding: 4px;"/>
-				</label>
-				<label>
-					Price (pesos)
-					<input type="number" name="price_pesos" min="0" step="1" required
-					       style="width: 90px; padding: 4px;"/>
-				</label>
-				<button type="submit">Add</button>
-			</form>
+				<h3>Add a staff account</h3>
+				<form method="post" action="/admin/users">
+					<label>
+						Email
+						<input type="email" name="email" required
+						       style="width: 200px; box-sizing: border-box; padding: 4px;"/>
+					</label>
+					<label>
+						Password
+						<input type="password" name="password" required
+						       style="width: 160px; box-sizing: border-box; padding: 4px;"/>
+					</label>
+					<label>
+						Role
+						<select name="role">
+							<option value="barber">barber</option>
+							<option value="admin">admin</option>
+						</select>
+					</label>
+					<button type="submit">Create</button>
+				</form>
+			</section>
+
+			<section>
+				<h2>Services</h2>
+				<table>
+					<tr>
+						<th style="width: 40px;">ID</th>
+						<th>Name</th>
+						<th style="width: 120px;">Price</th>
+						<th style="width: 120px;">Formatted</th>
+						<th style="width: 90px;"></th>
+					</tr>
+					for _, s := range services {
+						@ServiceRow(s)
+					}
+				</table>
+
+				<h3>Add a service</h3>
+				<form method="post" action="/admin/services">
+					<label>
+						Name
+						<input type="text" name="name" required
+						       style="width: 200px; box-sizing: border-box; padding: 4px;"/>
+					</label>
+					<label>
+						Price (pesos)
+						<input type="number" name="price_pesos" min="0" step="1" required
+						       style="width: 90px; padding: 4px;"/>
+					</label>
+					<button type="submit">Add</button>
+				</form>
+			</section>
 
 			<p style="margin-top: 32px;"><a href="/">Back to shop</a></p>
 		</body>

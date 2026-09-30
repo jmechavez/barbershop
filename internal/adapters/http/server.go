@@ -23,6 +23,7 @@ func NewRouter(h *Handlers) http.Handler {
 		r.Get("/admin", h.AdminHomePage)
 		r.Post("/admin/services", h.AdminCreateService)
 		r.Post("/admin/services/{id}", h.AdminUpdateService)
+		r.Post("/admin/users", h.AdminCreateUser)
 
 	})
 

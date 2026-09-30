@@ -14,6 +14,7 @@ import (
 
 type Handlers struct {
 	Services ports.ServiceRepository
+	Users    ports.UserRepository
 	Auth     *app.AuthService
 	Sessions *app.SessionService
 }
@@ -105,7 +106,13 @@ func (h *Handlers) AdminHomePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	AdminHome(user, services).Render(r.Context(), w)
+	users, err := h.Users.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	AdminHome(user, services, users).Render(r.Context(), w)
 }
 
 func (h *Handlers) AdminUpdateService(w http.ResponseWriter, r *http.Request) {
@@ -176,6 +183,35 @@ func (h *Handlers) AdminCreateService(w http.ResponseWriter, r *http.Request) {
 	priceCentavos := pricePesos * 100
 
 	if _, err := h.Services.Create(r.Context(), name, priceCentavos); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+func (h *Handlers) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+	roleStr := r.FormValue("role")
+
+	if email == "" || password == "" {
+		http.Error(w, "email and password required", http.StatusBadRequest)
+		return
+	}
+
+	role := domain.Role(roleStr)
+	if !role.Valid() {
+		http.Error(w, "invalid role", http.StatusBadRequest)
+		return
+	}
+
+	if _, err := h.Auth.CreateUser(r.Context(), email, password, role); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

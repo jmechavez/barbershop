@@ -33,6 +33,7 @@ func main() {
 	// HTTP adapter.
 	handlers := &httpadapter.Handlers{
 		Services: serviceRepo,
+		Users:    userRepo,
 		Auth:     authSvc,
 		Sessions: sessionSvc,
 	}

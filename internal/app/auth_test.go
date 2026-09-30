@@ -105,3 +105,17 @@ func (f *fakeUsers) FindByID(ctx context.Context, id int) (domain.User, error) {
 	}
 	return domain.User{}, ports.ErrUserNotFound
 }
+
+func (f *fakeUsers) Create(ctx context.Context, email string, passwordHash string, role domain.Role) (domain.User, error) {
+	u := domain.User{ID: len(f.byEmail) + 1, Email: email, PasswordHash: passwordHash, Role: role}
+	f.byEmail[email] = u
+	return u, nil
+}
+
+func (f *fakeUsers) List(ctx context.Context) ([]domain.User, error) {
+	var out []domain.User
+	for _, u := range f.byEmail {
+		out = append(out, u)
+	}
+	return out, nil
+}

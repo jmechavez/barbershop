@@ -61,6 +61,12 @@ type SessionStore interface {
 	Delete(ctx context.Context, token string) error
 }
 
+type HaircutRepository interface {
+	Create(ctx context.Context, h domain.Haircut) (domain.Haircut, error)
+	ListByBarber(ctx context.Context, barberID int, since time.Time) ([]domain.Haircut, error)
+	ListAll(ctx context.Context, since time.Time) ([]domain.Haircut, error)
+}
+
 // ErrSessionNotFound is returned by SessionStore.FindUserID when the
 // token is unknown, expired, or has been deleted.
 var ErrSessionNotFound = errors.New("session not found")

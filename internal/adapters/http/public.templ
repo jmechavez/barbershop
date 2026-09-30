@@ -10,7 +10,7 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<title>Barbershop</title>
+			<title>DRFT Barbershop</title>
 			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
 			<style>
 				body { font-family: sans-serif; max-width: 640px; margin: 40px auto; }
@@ -21,6 +21,7 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 				.topbar button { background: none; border: none; color: #0000ee;
 				                 text-decoration: underline; cursor: pointer;
 				                 font: inherit; padding: 0; }
+				h2 { margin-top: 32px; }
 			</style>
 		</head>
 		<body>
@@ -28,24 +29,39 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 				if loggedIn {
 					<span>{ user.Email }</span>
 					<form method="post" action="/logout">
-						<button type="submit"> Logout</button>
+						<button type="submit">Logout</button>
 					</form>
 				} else {
-					<a href="/login"> Login</a>
+					<a href="/login">Login</a>
 				}
 			</div>
 
-			<h1>Juan's Barbershop</h1>
-			<h2>Services</h2>
+			<h1>DRFT Barbershop</h1>
+			<p><em>Fresh Cut / Clean Look / Drft Style</em></p>
 
 			<form id="pick" hx-post="/pick" hx-target="#total" hx-swap="innerHTML">
+				<h2>Haircuts</h2>
 				for _, s := range services {
-					<label class="service">
-						<input type="checkbox" name="service" value={ fmt.Sprintf("%d", s.PriceCentavos) }/>
-						{ s.Name } — { domain.FormatCentavos(s.PriceCentavos) }
-					</label>
-					<br/>
+					if s.Category == "haircut" {
+						<label class="service">
+							<input type="checkbox" name="service" value={ fmt.Sprintf("%d", s.PriceCentavos) }/>
+							{ s.Name } — { s.FormatPrice() }
+						</label>
+						<br/>
+					}
 				}
+
+				<h2>Signature Packages</h2>
+				for _, s := range services {
+					if s.Category == "package" {
+						<label class="service">
+							<input type="checkbox" name="service" value={ fmt.Sprintf("%d", s.PriceCentavos) }/>
+							{ s.Name } — { s.FormatPrice() }
+						</label>
+						<br/>
+					}
+				}
+
 				<button type="submit">Update total</button>
 			</form>
 

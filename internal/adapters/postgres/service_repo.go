@@ -18,7 +18,9 @@ func NewServiceRepo(db *pgxpool.Pool) *ServiceRepo {
 }
 
 func (r *ServiceRepo) List(ctx context.Context) ([]domain.Service, error) {
-	rows, err := r.DB.Query(ctx, `SELECT id, name, price_centavos FROM services ORDER BY id`)
+	rows, err := r.DB.Query(ctx,
+		`SELECT id, name, price_centavos, category, is_starting_price
+		 FROM services ORDER BY category, id`)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +29,7 @@ func (r *ServiceRepo) List(ctx context.Context) ([]domain.Service, error) {
 	var out []domain.Service
 	for rows.Next() {
 		var s domain.Service
-		if err := rows.Scan(&s.ID, &s.Name, &s.PriceCentavos); err != nil {
+		if err := rows.Scan(&s.ID, &s.Name, &s.PriceCentavos, &s.Category, &s.IsStartingPrice); err != nil {
 			return nil, err
 		}
 		out = append(out, s)

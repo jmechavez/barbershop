@@ -20,27 +20,28 @@ func main() {
 	}
 	defer pool.Close()
 
-	// Adapters (the concrete implementations of our ports).
+	// Adapters (concrete implementations of ports)
 	serviceRepo := postgres.NewServiceRepo(pool)
 	userRepo := postgres.NewUserRepo(pool)
 	sessionRepo := postgres.NewSessionRepo(pool)
+	haircutRepo := postgres.NewHaircutRepo(pool)
+	cashAdvanceRepo := postgres.NewCashAdvanceRepo(pool)
 	hasher := bcryptadapter.NewHasher()
 
-	// Use cases (the app layer).
+	// Use cases (application services)
 	authSvc := app.NewAuthService(userRepo, hasher)
 	sessionSvc := app.NewSessionService(sessionRepo, userRepo)
-
-	// Haircut service
-	haircutRepo := postgres.NewHaircutRepo(pool)
 	haircutSvc := app.NewHaircutService(haircutRepo, serviceRepo)
+	cashAdvanceSvc := app.NewCashAdvanceService(cashAdvanceRepo)
 
-	// HTTP adapter.
+	// HTTP adapter
 	handlers := &httpadapter.Handlers{
-		Services: serviceRepo,
-		Users:    userRepo,
-		Haircuts: haircutSvc,
-		Auth:     authSvc,
-		Sessions: sessionSvc,
+		Services:     serviceRepo,
+		Users:        userRepo,
+		Haircuts:     haircutSvc,
+		CashAdvances: cashAdvanceSvc,
+		Auth:         authSvc,
+		Sessions:     sessionSvc,
 	}
 	router := httpadapter.NewRouter(handlers)
 

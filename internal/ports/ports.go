@@ -51,3 +51,8 @@ type HaircutRepository interface {
 	ListByBarber(ctx context.Context, barberID int, since time.Time) ([]domain.Haircut, error)
 	ListAll(ctx context.Context, since time.Time) ([]domain.Haircut, error)
 }
+
+type CashAdvanceRepository interface {
+	Create(ctx context.Context, a domain.CashAdvance) (domain.CashAdvance, error)
+	ListByBarber(ctx context.Context, barberID int, since time.Time) ([]domain.CashAdvance, error)
+}

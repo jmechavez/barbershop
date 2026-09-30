@@ -6,7 +6,7 @@ import (
 	"barbershop/internal/domain"
 )
 
-templ AdminHome(user domain.User, services []domain.Service, users []domain.User) {
+templ AdminHome(user domain.User, services []domain.Service, users []domain.User, advances []domain.CashAdvance, barberName map[int]string) {
 	<!DOCTYPE html>
 	<html>
 		<head>
@@ -19,6 +19,7 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 				input[type=text], input[type=email], input[type=password] { width: 100%; box-sizing: border-box; padding: 4px; }
 				input[type=number] { width: 90px; padding: 4px; }
 				section { margin-top: 32px; }
+				small { color: #666; }
 			</style>
 		</head>
 		<body>
@@ -80,6 +81,57 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 			</section>
 
 			<section>
+				<h2>Cash advances (last 30 days)</h2>
+				if len(advances) == 0 {
+					<p>No cash advances in the last 30 days.</p>
+				} else {
+					<table>
+						<tr>
+							<th style="width: 70px;">ID</th>
+							<th>Barber</th>
+							<th style="width: 100px;">Amount</th>
+							<th style="width: 160px;">Date</th>
+							<th>Note</th>
+						</tr>
+						for _, a := range advances {
+							<tr>
+								<td>{ fmt.Sprintf("%d", a.ID) }</td>
+								<td>{ barberName[a.BarberID] }</td>
+								<td>{ domain.FormatCentavos(a.AmountCentavos) }</td>
+								<td>{ a.TakenAt.Format("Jan 2, 2006") }</td>
+								<td>{ a.Note }</td>
+							</tr>
+						}
+					</table>
+				}
+
+				<h3>Record a cash advance</h3>
+				<form method="post" action="/admin/cash-advances">
+					<label>
+						Barber
+						<select name="barber_id" required>
+							for _, u := range users {
+								if u.Role == domain.RoleBarber {
+									<option value={ fmt.Sprintf("%d", u.ID) }>{ u.FullName }</option>
+								}
+							}
+						</select>
+					</label>
+					<label style="margin-left: 20px;">
+						Amount (pesos)
+						<input type="number" name="amount_pesos" min="1" step="1" required
+						       style="width: 100px; padding: 4px;"/>
+					</label>
+					<label style="margin-left: 20px;">
+						Note
+						<input type="text" name="note" placeholder="Reason (optional)"
+						       style="width: 240px; padding: 4px;"/>
+					</label>
+					<button type="submit" style="margin-left: 20px;">Record</button>
+				</form>
+			</section>
+
+			<section>
 				<h2>Services</h2>
 				<table>
 					<tr>
@@ -110,7 +162,7 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 				</form>
 			</section>
 
-			<p style="margin-top: 32px;"><a href="/">Back to shop</a></p>
+			<p style="margin-top: 32px;"><a href="/counter">Counter</a> · <a href="/">Back to shop</a></p>
 		</body>
 	</html>
 }

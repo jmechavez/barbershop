@@ -14,11 +14,12 @@ import (
 )
 
 type Handlers struct {
-	Services ports.ServiceRepository
-	Users    ports.UserRepository
-	Haircuts *app.HaircutService
-	Auth     *app.AuthService
-	Sessions *app.SessionService
+	Services     ports.ServiceRepository
+	Users        ports.UserRepository
+	Haircuts     *app.HaircutService
+	CashAdvances *app.CashAdvanceService
+	Auth         *app.AuthService
+	Sessions     *app.SessionService
 }
 
 func (h *Handlers) Public(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +109,27 @@ func (h *Handlers) AdminHomePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	AdminHome(user, services, users).Render(r.Context(), w)
+	barberName := map[int]string{}
+	for _, u := range users {
+		barberName[u.ID] = u.FullName
+	}
+
+	// Advances: combine recent advances for all barbers.
+	// Simple approach: fetch each barber's last 30 days.
+	var advances []domain.CashAdvance
+	for _, u := range users {
+		if u.Role != domain.RoleBarber {
+			continue
+		}
+		as, err := h.CashAdvances.RecentForBarber(r.Context(), u.ID, 30)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		advances = append(advances, as...)
+	}
+
+	AdminHome(user, services, users, advances, barberName).Render(r.Context(), w)
 }
 
 func (h *Handlers) AdminUpdateService(w http.ResponseWriter, r *http.Request) {
@@ -372,5 +393,40 @@ func (h *Handlers) MeHome(w http.ResponseWriter, r *http.Request) {
 		serviceName[s.ID] = s.Name
 	}
 
-	MePage(user, haircuts, serviceName).Render(r.Context(), w)
+	advances, err := h.CashAdvances.RecentForBarber(r.Context(), user.ID, 30)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	MePage(user, haircuts, serviceName, advances).Render(r.Context(), w)
+}
+
+func (h *Handlers) AdminCreateCashAdvance(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+
+	barberID, err := strconv.Atoi(r.FormValue("barber_id"))
+	if err != nil {
+		http.Error(w, "bad barber", http.StatusBadRequest)
+		return
+	}
+
+	amountPesos, err := strconv.Atoi(r.FormValue("amount_pesos"))
+	if err != nil || amountPesos <= 0 {
+		http.Error(w, "bad amount", http.StatusBadRequest)
+		return
+	}
+	amountCentavos := amountPesos * 100
+
+	note := r.FormValue("note")
+
+	if _, err := h.CashAdvances.Record(r.Context(), barberID, amountCentavos, note); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }

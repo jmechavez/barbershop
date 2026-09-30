@@ -6,7 +6,7 @@ import (
 	"barbershop/internal/domain"
 )
 
-templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]string) {
+templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]string, advances []domain.CashAdvance) {
 	<!DOCTYPE html>
 	<html>
 		<head>
@@ -23,6 +23,7 @@ templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]st
 				.summary { margin-top: 16px; font-size: 1.1em; }
 				.summary strong { font-size: 1.3em; }
 				small { color: #666; }
+				section { margin-top: 32px; }
 			</style>
 		</head>
 		<body>
@@ -36,58 +37,88 @@ templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]st
 			<h1>Hello, { user.FullName }</h1>
 			<p>Today is a good day to look sharp.</p>
 
-			<h2>Today</h2>
+			<section>
+				<h2>Today</h2>
 
-			if len(haircuts) == 0 {
-				<p>No haircuts recorded yet today.</p>
-			} else {
-				<p class="summary">
-					Haircuts: <strong>{ fmt.Sprintf("%d", len(haircuts)) }</strong>
-					&nbsp;·&nbsp;
-					Total list price: <strong>{ domain.FormatCentavos(domain.SumListCentavos(haircuts)) }</strong>
-					&nbsp;·&nbsp;
-					Net collected: <strong>{ domain.FormatCentavos(domain.SumNetCentavos(haircuts)) }</strong>
-				</p>
+				if len(haircuts) == 0 {
+					<p>No haircuts recorded yet today.</p>
+				} else {
+					<p class="summary">
+						Haircuts: <strong>{ fmt.Sprintf("%d", len(haircuts)) }</strong>
+						&nbsp;·&nbsp;
+						Total list price: <strong>{ domain.FormatCentavos(domain.SumListCentavos(haircuts)) }</strong>
+						&nbsp;·&nbsp;
+						Net collected: <strong>{ domain.FormatCentavos(domain.SumNetCentavos(haircuts)) }</strong>
+					</p>
 
-				<table>
-					<tr>
-						<th>Service</th>
-						<th style="width: 90px;">Price</th>
-						<th style="width: 130px;">Discount</th>
-						<th style="width: 90px;">Net</th>
-						<th>Payments</th>
-					</tr>
-					for _, h := range haircuts {
+					<table>
 						<tr>
-							<td>{ serviceName[h.ServiceID] }</td>
-							<td>{ domain.FormatCentavos(h.PriceCentavos) }</td>
-							<td>
-								if h.DiscountCentavos > 0 {
-									{ domain.FormatCentavos(h.DiscountCentavos) }
-									if h.DiscountReason != "" {
-										<br/><small>({ h.DiscountReason })</small>
-									}
-								} else {
-									—
-								}
-							</td>
-							<td>{ domain.FormatCentavos(h.NetCentavos) }</td>
-							<td>
-								if len(h.Payments) == 0 {
-									<small>(free)</small>
-								} else {
-									for i, p := range h.Payments {
-										if i > 0 {
-											<br/>
-										}
-										{ string(p.Method) }: { domain.FormatCentavos(p.AmountCentavos) }
-									}
-								}
-							</td>
+							<th>Service</th>
+							<th style="width: 90px;">Price</th>
+							<th style="width: 130px;">Discount</th>
+							<th style="width: 90px;">Net</th>
+							<th>Payments</th>
 						</tr>
-					}
-				</table>
-			}
+						for _, h := range haircuts {
+							<tr>
+								<td>{ serviceName[h.ServiceID] }</td>
+								<td>{ domain.FormatCentavos(h.PriceCentavos) }</td>
+								<td>
+									if h.DiscountCentavos > 0 {
+										{ domain.FormatCentavos(h.DiscountCentavos) }
+										if h.DiscountReason != "" {
+											<br/><small>({ h.DiscountReason })</small>
+										}
+									} else {
+										—
+									}
+								</td>
+								<td>{ domain.FormatCentavos(h.NetCentavos) }</td>
+								<td>
+									if len(h.Payments) == 0 {
+										<small>(free)</small>
+									} else {
+										for i, p := range h.Payments {
+											if i > 0 {
+												<br/>
+											}
+											{ string(p.Method) }: { domain.FormatCentavos(p.AmountCentavos) }
+										}
+									}
+								</td>
+							</tr>
+						}
+					</table>
+				}
+			</section>
+
+			<section>
+				<h2>Cash advances (last 30 days)</h2>
+				if len(advances) == 0 {
+					<p>No cash advances in the last 30 days.</p>
+				} else {
+					<p class="summary">
+						Total: <strong>{ domain.FormatCentavos(domain.SumAdvances(advances)) }</strong>
+						&nbsp;·&nbsp;
+						Count: <strong>{ fmt.Sprintf("%d", len(advances)) }</strong>
+					</p>
+
+					<table>
+						<tr>
+							<th style="width: 170px;">Date</th>
+							<th style="width: 100px;">Amount</th>
+							<th>Note</th>
+						</tr>
+						for _, a := range advances {
+							<tr>
+								<td>{ a.TakenAt.Format("Jan 2, 2006") }</td>
+								<td>{ domain.FormatCentavos(a.AmountCentavos) }</td>
+								<td>{ a.Note }</td>
+							</tr>
+						}
+					</table>
+				}
+			</section>
 
 			<p style="margin-top: 32px;"><a href="/">Back to shop</a></p>
 		</body>

@@ -26,6 +26,7 @@ func NewRouter(h *Handlers) http.Handler {
 		r.Post("/admin/services", h.AdminCreateService)
 		r.Post("/admin/services/{id}", h.AdminUpdateService)
 		r.Post("/admin/users", h.AdminCreateUser)
+		r.Post("/admin/cash-advances", h.AdminCreateCashAdvance)
 
 		// Counter (recording)
 		r.Get("/counter", h.CounterHome)

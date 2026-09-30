@@ -35,10 +35,23 @@ func (r *ServiceRepo) List(ctx context.Context) ([]domain.Service, error) {
 	return out, rows.Err()
 }
 
-func (r *ServiceRepo) UpdatePrice(ctx context.Context, id int, priceCentavos int) error {
+func (r *ServiceRepo) Update(ctx context.Context, id int, name string, priceCentavos int) error {
 	_, err := r.DB.Exec(ctx,
-		`UPDATE services SET price_centavos = $1 WHERE id = $2`,
-		priceCentavos, id,
+		`UPDATE services SET name = $1, price_centavos = $2 WHERE id = $3`,
+		name, priceCentavos, id,
 	)
 	return err
+}
+
+func (r *ServiceRepo) Create(ctx context.Context, name string, priceCentavos int) (domain.Service, error) {
+	var s domain.Service
+	err := r.DB.QueryRow(ctx,
+		`INSERT INTO services (name, price_centavos) VALUES ($1, $2)
+		 RETURNING id, name, price_centavos`,
+		name, priceCentavos,
+	).Scan(&s.ID, &s.Name, &s.PriceCentavos)
+	if err != nil {
+		return domain.Service{}, err
+	}
+	return s, nil
 }

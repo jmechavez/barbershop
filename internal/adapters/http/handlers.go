@@ -108,7 +108,7 @@ func (h *Handlers) AdminHomePage(w http.ResponseWriter, r *http.Request) {
 	AdminHome(user, services).Render(r.Context(), w)
 }
 
-func (h *Handlers) AdminUpdateServicePrice(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) AdminUpdateService(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -120,19 +120,27 @@ func (h *Handlers) AdminUpdateServicePrice(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
-	priceStr := r.FormValue("price_centavos")
-	price, err := strconv.Atoi(priceStr)
-	if err != nil || price < 0 {
-		http.Error(w, "bad price", http.StatusBadRequest)
+
+	name := r.FormValue("name")
+	if name == "" {
+		http.Error(w, "name required", http.StatusBadRequest)
 		return
 	}
 
-	if err := h.Services.UpdatePrice(r.Context(), id, price); err != nil {
+	priceStr := r.FormValue("price_pesos")
+	pricePesos, err := strconv.Atoi(priceStr)
+	if err != nil || pricePesos < 0 {
+		http.Error(w, "bad price", http.StatusBadRequest)
+		return
+	}
+	priceCentavos := pricePesos * 100
+
+	if err := h.Services.Update(r.Context(), id, name, priceCentavos); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Fetch the updated service and render just its row.
+	// Re-fetch and render just this row.
 	services, err := h.Services.List(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -145,4 +153,32 @@ func (h *Handlers) AdminUpdateServicePrice(w http.ResponseWriter, r *http.Reques
 		}
 	}
 	http.Error(w, "not found", http.StatusNotFound)
+}
+
+func (h *Handlers) AdminCreateService(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+
+	name := r.FormValue("name")
+	if name == "" {
+		http.Error(w, "name required", http.StatusBadRequest)
+		return
+	}
+
+	priceStr := r.FormValue("price_pesos")
+	pricePesos, err := strconv.Atoi(priceStr)
+	if err != nil || pricePesos < 0 {
+		http.Error(w, "bad price", http.StatusBadRequest)
+		return
+	}
+	priceCentavos := pricePesos * 100
+
+	if _, err := h.Services.Create(r.Context(), name, priceCentavos); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }

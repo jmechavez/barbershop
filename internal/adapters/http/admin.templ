@@ -13,10 +13,11 @@ templ AdminHome(user domain.User, services []domain.Service) {
 			<title>Admin — Barbershop</title>
 			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
 			<style>
-				body { font-family: sans-serif; max-width: 720px; margin: 40px auto; }
+				body { font-family: sans-serif; max-width: 900px; margin: 40px auto; }
 				table { border-collapse: collapse; width: 100%; margin-top: 16px; }
-				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-				input[type=number] { width: 100px; padding: 4px; }
+				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: middle; }
+				input[type=text] { width: 100%; box-sizing: border-box; padding: 4px; }
+				input[type=number] { width: 90px; padding: 4px; }
 			</style>
 		</head>
 		<body>
@@ -26,33 +27,33 @@ templ AdminHome(user domain.User, services []domain.Service) {
 			<h2>Services</h2>
 			<table>
 				<tr>
-					<th>ID</th>
+					<th style="width: 40px;">ID</th>
 					<th>Name</th>
-					<th>Price</th>
-					<th></th>
+					<th style="width: 120px;">Price</th>
+					<th style="width: 120px;">Formatted</th>
+					<th style="width: 90px;"></th>
 				</tr>
 				for _, s := range services {
-					<tr id={ fmt.Sprintf("service-%d", s.ID) }>
-						<td>{ fmt.Sprintf("%d", s.ID) }</td>
-						<td>{ s.Name }</td>
-						<td>
-							<form hx-post={ fmt.Sprintf("/admin/services/%d/price", s.ID) }
-							      hx-target={ fmt.Sprintf("#service-%d", s.ID) }
-							      hx-swap="outerHTML">
-								<input type="number"
-								       name="price_centavos"
-								       value={ fmt.Sprintf("%d", s.PriceCentavos) }
-								       min="0"
-								       required/>
-								<button type="submit">Save</button>
-							</form>
-						</td>
-						<td>{ domain.FormatCentavos(s.PriceCentavos) }</td>
-					</tr>
+					@ServiceRow(s)
 				}
 			</table>
 
-			<p><a href="/">Back to shop</a></p>
+			<h2>Add a service</h2>
+			<form method="post" action="/admin/services">
+				<label>
+					Name
+					<input type="text" name="name" required
+					       style="width: 200px; box-sizing: border-box; padding: 4px;"/>
+				</label>
+				<label>
+					Price (pesos)
+					<input type="number" name="price_pesos" min="0" step="1" required
+					       style="width: 90px; padding: 4px;"/>
+				</label>
+				<button type="submit">Add</button>
+			</form>
+
+			<p style="margin-top: 32px;"><a href="/">Back to shop</a></p>
 		</body>
 	</html>
 }
@@ -60,19 +61,30 @@ templ AdminHome(user domain.User, services []domain.Service) {
 templ ServiceRow(s domain.Service) {
 	<tr id={ fmt.Sprintf("service-%d", s.ID) }>
 		<td>{ fmt.Sprintf("%d", s.ID) }</td>
-		<td>{ s.Name }</td>
 		<td>
-			<form hx-post={ fmt.Sprintf("/admin/services/%d/price", s.ID) }
+			<input type="text"
+			       name="name"
+			       form={ fmt.Sprintf("form-%d", s.ID) }
+			       value={ s.Name }
+			       required/>
+		</td>
+		<td>
+			<input type="number"
+			       name="price_pesos"
+			       form={ fmt.Sprintf("form-%d", s.ID) }
+			       value={ fmt.Sprintf("%d", s.PriceCentavos/100) }
+			       min="0"
+			       step="1"
+			       required/>
+		</td>
+		<td>{ domain.FormatCentavos(s.PriceCentavos) }</td>
+		<td>
+			<form id={ fmt.Sprintf("form-%d", s.ID) }
+			      hx-post={ fmt.Sprintf("/admin/services/%d", s.ID) }
 			      hx-target={ fmt.Sprintf("#service-%d", s.ID) }
 			      hx-swap="outerHTML">
-				<input type="number"
-				       name="price_centavos"
-				       value={ fmt.Sprintf("%d", s.PriceCentavos) }
-				       min="0"
-				       required/>
 				<button type="submit">Save</button>
 			</form>
 		</td>
-		<td>{ domain.FormatCentavos(s.PriceCentavos) }</td>
 	</tr>
 }

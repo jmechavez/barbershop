@@ -27,9 +27,9 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 		<body>
 			<div class="topbar">
 				if loggedIn {
-					<span>{ user.Email }</span>
-					<form method="post" action="/logout">
-						<button type="submit">Logout</button>
+					<a href="/me">{ user.FullName }</a>
+	<form method="post" action="/logout">
+		<button type="submit">Logout</button>
 					</form>
 				} else {
 					<a href="/login">Login</a>

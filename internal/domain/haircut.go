@@ -49,3 +49,21 @@ func NewHaircut(barberID, serviceID, priceCentavos, discountCentavos int, reason
 		Payments:         payments,
 	}
 }
+
+// SumListCentavos returns the total list price of the given haircuts.
+func SumListCentavos(haircuts []Haircut) int {
+	total := 0
+	for _, h := range haircuts {
+		total += h.PriceCentavos
+	}
+	return total
+}
+
+// SumNetCentavos returns the total net amount of the given haircuts.
+func SumNetCentavos(haircuts []Haircut) int {
+	total := 0
+	for _, h := range haircuts {
+		total += h.NetCentavos
+	}
+	return total
+}

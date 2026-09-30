@@ -348,3 +348,29 @@ func parsePayments(r *http.Request) ([]domain.Payment, error) {
 	}
 	return out, nil
 }
+
+func (h *Handlers) MeHome(w http.ResponseWriter, r *http.Request) {
+	user, ok := CurrentUser(r.Context())
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	haircuts, err := h.Haircuts.Today(r.Context(), user.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	services, err := h.Services.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	serviceName := map[int]string{}
+	for _, s := range services {
+		serviceName[s.ID] = s.Name
+	}
+
+	MePage(user, haircuts, serviceName).Render(r.Context(), w)
+}

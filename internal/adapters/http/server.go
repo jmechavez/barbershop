@@ -32,5 +32,11 @@ func NewRouter(h *Handlers) http.Handler {
 		r.Post("/counter/haircuts", h.CounterRecordHaircut)
 	})
 
+	// Logged-in pages
+	r.Group(func(r chi.Router) {
+		r.Use(h.RequireLogin)
+		r.Get("/me", h.MeHome)
+	})
+
 	return r
 }

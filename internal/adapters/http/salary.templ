@@ -10,81 +10,140 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<title>Salary — Barbershop</title>
-			<style>
-				body { font-family: sans-serif; max-width: 900px; margin: 40px auto; }
-				.topbar { text-align: right; margin-bottom: 20px; }
-				.topbar form { display: inline; margin: 0; padding: 0; }
-				.topbar button { background: none; border: none; color: #0000ee;
-				                 text-decoration: underline; cursor: pointer;
-				                 font: inherit; padding: 0; }
-				table { border-collapse: collapse; width: 100%; margin-top: 16px; }
-				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: middle; }
-				th { background: #f4f4f4; }
-				small { color: #666; }
-				.totals { margin-top: 24px; padding: 16px; background: #f9f9f9; border: 1px solid #ddd; }
-				.totals div { margin: 6px 0; font-size: 1.05em; }
-				.totals .take-home { font-size: 1.3em; font-weight: bold; margin-top: 12px; }
-			</style>
+			<title>Salary · DRFT Barbershop</title>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<link rel="stylesheet" href="/static/style.css"/>
 		</head>
-		<body>
-			<div class="topbar">
-				<span>{ user.FullName }</span>
-				<form method="post" action="/logout">
-					<button type="submit">Logout</button>
-				</form>
-			</div>
+		<body class="app-page">
+			<div class="app-shell">
 
-			<h1>Salary</h1>
-			<p><a href="/me">← Back to my page</a></p>
+				<nav class="app-nav">
+					<a href="/" class="app-nav-brand">DRFT</a>
+					<div class="app-nav-tabs">
+						<a href="/me">My page</a>
+						<a href="/me/salary" class="active">Salary</a>
+					</div>
+					<div class="app-nav-user">
+						<span>{ user.FullName }</span>
+						<form method="post" action="/logout">
+							<button type="submit">Logout</button>
+						</form>
+					</div>
+				</nav>
 
-			<form method="get" action="/me/salary">
-				<label>
-					From
-					<input type="date" name="from" value={ fromStr } required/>
-				</label>
-				<label style="margin-left: 12px;">
-					To
-					<input type="date" name="to" value={ toStr } required/>
-				</label>
-				<button type="submit" style="margin-left: 12px;">Show</button>
-			</form>
+				<main class="app-main">
 
-			if len(summary.Days) == 0 {
-				<p style="margin-top: 24px;">No working days in this range.</p>
-			} else {
-				<table>
-					<tr>
-						<th style="width: 140px;">Date</th>
-						<th style="width: 60px;">Cuts</th>
-						<th style="width: 110px;">List total</th>
-						<th style="width: 110px;">Commission</th>
-						<th style="width: 120px;">Paid</th>
-					</tr>
-					for _, d := range summary.Days {
-						<tr>
-							<td>{ d.Date.Format("Mon, Jan 2") }</td>
-							<td>{ fmt.Sprintf("%d", d.HaircutCount) }</td>
-							<td>{ domain.FormatCentavos(d.ListTotal) }</td>
-							<td>{ domain.FormatCentavos(d.Commission) }</td>
-							<td>
-								{ domain.FormatCentavos(d.Paid) }
-								if d.FloorApplied {
-									<br/><small>(minimum)</small>
-								}
-							</td>
-						</tr>
+					<header class="app-header">
+						<h1 class="app-title">Salary</h1>
+						<p class="app-sub">
+							From <strong>{ summary.From.Format("Jan 2") }</strong> to <strong>{ summary.To.Format("Jan 2, 2006") }</strong>
+						</p>
+					</header>
+
+					<!-- Filter -->
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Date range</h2>
+						</div>
+						<div class="panel-body">
+							<form method="get" action="/me/salary" class="inline-form">
+								<label class="inline-label">
+									<span>From</span>
+									<input type="date" name="from" value={ fromStr } required/>
+								</label>
+								<label class="inline-label">
+									<span>To</span>
+									<input type="date" name="to" value={ toStr } required/>
+								</label>
+								<button type="submit">Show</button>
+							</form>
+						</div>
+					</section>
+
+					<!-- Summary stats -->
+					<section class="stats-row">
+						<div class="stat-card">
+							<div class="stat-label">Working days</div>
+							<div class="stat-value">{ fmt.Sprintf("%d", len(summary.Days)) }</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-label">Gross salary</div>
+							<div class="stat-value">{ domain.FormatCentavos(summary.GrossSalary) }</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-label">Advances</div>
+							<div class="stat-value">{ domain.FormatCentavos(summary.AdvancesTotal) }</div>
+						</div>
+						<div class="stat-card stat-card-accent">
+							<div class="stat-label">Take home</div>
+							<div class="stat-value">{ domain.FormatCentavos(summary.TakeHome) }</div>
+						</div>
+					</section>
+
+					<!-- Daily breakdown -->
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Daily breakdown</h2>
+							<p class="panel-sub">
+								Daily minimum { domain.FormatCentavos(summary.DailyFloor) } · commission { fmt.Sprintf("%d%%", domain.CommissionPercent) }
+							</p>
+						</div>
+
+						if len(summary.Days) == 0 {
+							<div class="empty-state">
+								<p>No working days in this range.</p>
+							</div>
+						} else {
+							<table class="data-table">
+								<thead>
+									<tr>
+										<th style="width: 180px;">Date</th>
+										<th style="width: 80px;">Cuts</th>
+										<th style="width: 130px;">List total</th>
+										<th style="width: 130px;">Commission</th>
+										<th style="width: 130px;">Paid</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, d := range summary.Days {
+										<tr>
+											<td>{ d.Date.Format("Mon, Jan 2") }</td>
+											<td class="data-mono">{ fmt.Sprintf("%d", d.HaircutCount) }</td>
+											<td>{ domain.FormatCentavos(d.ListTotal) }</td>
+											<td>{ domain.FormatCentavos(d.Commission) }</td>
+											<td>
+												<span class="data-strong">{ domain.FormatCentavos(d.Paid) }</span>
+												if d.FloorApplied {
+													<br/><small class="floor-tag">minimum applied</small>
+												}
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+					</section>
+
+					<!-- Totals box -->
+					if len(summary.Days) > 0 {
+						<div class="totals-box">
+							<div class="totals-row">
+								<span>Gross salary</span>
+								<strong>{ domain.FormatCentavos(summary.GrossSalary) }</strong>
+							</div>
+							<div class="totals-row">
+								<span>Cash advances</span>
+								<strong>− { domain.FormatCentavos(summary.AdvancesTotal) }</strong>
+							</div>
+							<div class="totals-row totals-row-final">
+								<span>Take home</span>
+								<strong>{ domain.FormatCentavos(summary.TakeHome) }</strong>
+							</div>
+						</div>
 					}
-				</table>
 
-				<div class="totals">
-					<div>Gross salary: <strong>{ domain.FormatCentavos(summary.GrossSalary) }</strong></div>
-					<div>Cash advances: <strong>− { domain.FormatCentavos(summary.AdvancesTotal) }</strong></div>
-					<div class="take-home">Take home: { domain.FormatCentavos(summary.TakeHome) }</div>
-				</div>
-			}
-
-			<p style="margin-top: 32px;"><a href="/">Back to shop</a></p>
+				</main>
+			</div>
 		</body>
 	</html>
 }

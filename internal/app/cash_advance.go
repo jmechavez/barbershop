@@ -37,3 +37,8 @@ func (s *CashAdvanceService) RecentForBarber(ctx context.Context, barberID int, 
 	since := time.Now().AddDate(0, 0, -days)
 	return s.Advances.ListByBarber(ctx, barberID, since)
 }
+
+// ListRange returns advances for a barber between from and to (exclusive).
+func (s *CashAdvanceService) ListRange(ctx context.Context, barberID int, from, to time.Time) ([]domain.CashAdvance, error) {
+	return s.Advances.ListByBarberRange(ctx, barberID, from, to)
+}

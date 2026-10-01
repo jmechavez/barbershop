@@ -6,133 +6,184 @@ import (
 	"barbershop/internal/domain"
 )
 
-templ CounterPage(admin domain.User, barbers []domain.User, services []domain.Service, haircuts []domain.Haircut, barberName map[int]string, serviceName map[int]string, errorMsg string) {
+templ CounterPage(
+	admin domain.User,
+	barbers []domain.User,
+	services []domain.Service,
+	haircuts []domain.Haircut,
+	barberName map[int]string,
+	serviceName map[int]string,
+	errorMsg string,
+) {
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<title>Counter — Barbershop</title>
-			<style>
-				body { font-family: sans-serif; max-width: 1000px; margin: 40px auto; }
-				.topbar { text-align: right; margin-bottom: 20px; }
-				.topbar form { display: inline; margin: 0; padding: 0; }
-				.topbar button { background: none; border: none; color: #0000ee;
-				                 text-decoration: underline; cursor: pointer;
-				                 font: inherit; padding: 0; }
-				table { border-collapse: collapse; width: 100%; margin-top: 16px; }
-				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: middle; }
-				.error { color: #b00020; margin: 12px 0; }
-				.pay { display: flex; gap: 20px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
-				.pay label { display: flex; gap: 6px; align-items: center; }
-				.pay input[type=number] { width: 100px; padding: 4px; }
-				.pay input[type=text] { padding: 4px; }
-				.section { margin-top: 32px; }
-				small { color: #666; }
-			</style>
+			<title>Counter · DRFT Barbershop</title>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<link rel="stylesheet" href="/static/style.css"/>
 		</head>
-		<body>
-			<div class="topbar">
-				<span>{ admin.FullName }</span>
-				<form method="post" action="/logout">
-					<button type="submit">Logout</button>
-				</form>
-			</div>
+		<body class="app-page">
+			<div class="app-shell">
 
-			<h1>Counter</h1>
-			<p>Record a haircut.</p>
+				<nav class="app-nav">
+					<a href="/" class="app-nav-brand">DRFT</a>
+					<div class="app-nav-tabs">
+						<a href="/admin">Admin</a>
+						<a href="/counter" class="active">Counter</a>
+						<a href="/admin/haircuts">Haircuts</a>
+						<a href="/admin/cash-advances">Advances</a>
+					</div>
+					<div class="app-nav-user">
+						<span>{ admin.FullName }</span>
+						<form method="post" action="/logout">
+							<button type="submit">Logout</button>
+						</form>
+					</div>
+				</nav>
 
-			if errorMsg != "" {
-				<p class="error">{ errorMsg }</p>
-			}
+				<main class="app-main">
 
-			<form method="post" action="/counter/haircuts">
-				<label>
-					Barber
-					<select name="barber_id" required>
-						for _, b := range barbers {
-							<option value={ fmt.Sprintf("%d", b.ID) }>{ b.FullName }</option>
-						}
-					</select>
-				</label>
+					<header class="app-header">
+						<h1 class="app-title">Counter</h1>
+						<p class="app-sub">Record a haircut</p>
+					</header>
 
-				<label style="margin-left: 20px;">
-					Service
-					<select name="service_id" required>
-						for _, s := range services {
-							<option value={ fmt.Sprintf("%d", s.ID) }>
-								{ s.Name } — { s.FormatPrice() }
-							</option>
-						}
-					</select>
-				</label>
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">New haircut</h2>
+						</div>
+						<div class="panel-body">
 
-				<p style="margin-top: 16px;">Discount (optional):</p>
-				<div class="pay">
-					<label>₱ <input type="number" name="discount_pesos" min="0" step="1" value="0"/></label>
-					<label>Reason <input type="text" name="discount_reason" placeholder="Student, Senior, VIP, ..." style="width: 240px;"/></label>
-				</div>
+							if errorMsg != "" {
+								<p class="error">{ errorMsg }</p>
+							}
 
-				<p style="margin-top: 16px;">Payment (fill in what was paid — one or more):</p>
-				<div class="pay">
-					<label>GCash ₱ <input type="number" name="pay_gcash" min="0" step="1" value="0"/></label>
-					<label>Maribank ₱ <input type="number" name="pay_maribank" min="0" step="1" value="0"/></label>
-					<label>Cash ₱ <input type="number" name="pay_cash" min="0" step="1" value="0"/></label>
-				</div>
+							<form method="post" action="/counter/haircuts" class="counter-form">
 
-				<button type="submit" style="margin-top: 12px;">Record haircut</button>
-			</form>
-
-			<section class="section">
-				<h2>Today</h2>
-
-				if len(haircuts) == 0 {
-					<p>No haircuts recorded yet today.</p>
-				} else {
-					<table>
-						<tr>
-							<th style="width: 70px;">Time</th>
-							<th>Barber</th>
-							<th>Service</th>
-							<th style="width: 90px;">Price</th>
-							<th style="width: 130px;">Discount</th>
-							<th style="width: 90px;">Net</th>
-							<th>Payments</th>
-						</tr>
-						for _, h := range haircuts {
-							<tr>
-								<td>{ h.CreatedAt.Format("15:04") }</td>
-								<td>{ barberName[h.BarberID] }</td>
-								<td>{ serviceName[h.ServiceID] }</td>
-								<td>{ domain.FormatCentavos(h.PriceCentavos) }</td>
-								<td>
-									if h.DiscountCentavos > 0 {
-										{ domain.FormatCentavos(h.DiscountCentavos) }
-										if h.DiscountReason != "" {
-											<br/><small>({ h.DiscountReason })</small>
-										}
-									} else {
-										—
-									}
-								</td>
-								<td>{ domain.FormatCentavos(h.NetCentavos) }</td>
-								<td>
-									if len(h.Payments) == 0 {
-										<small>(free)</small>
-									} else {
-										for i, p := range h.Payments {
-											if i > 0 {
-												<br/>
+								<div class="form-row">
+									<label class="inline-label">
+										<span>Barber</span>
+										<select name="barber_id" required>
+											for _, b := range barbers {
+												<option value={ fmt.Sprintf("%d", b.ID) }>{ b.FullName }</option>
 											}
-											{ string(p.Method) }: { domain.FormatCentavos(p.AmountCentavos) }
-										}
-									}
-								</td>
-							</tr>
-						}
-					</table>
-				}
-			</section>
+										</select>
+									</label>
 
-			<p style="margin-top: 32px;"><a href="/admin">Admin panel</a> · <a href="/">Back to shop</a></p>
+									<label class="inline-label">
+										<span>Service</span>
+										<select name="service_id" required>
+											for _, s := range services {
+												<option value={ fmt.Sprintf("%d", s.ID) }>
+													{ s.Name } — { s.FormatPrice() }
+												</option>
+											}
+										</select>
+									</label>
+								</div>
+
+								<div class="form-row">
+									<label class="inline-label">
+										<span>Discount (₱)</span>
+										<input type="number" name="discount_pesos" min="0" step="1" value="0"/>
+									</label>
+
+									<label class="inline-label inline-label-grow">
+										<span>Discount reason</span>
+										<input type="text" name="discount_reason" placeholder="Student, Senior, VIP..."/>
+									</label>
+								</div>
+
+								<div class="form-row form-row-payments">
+									<label class="inline-label">
+										<span>GCash (₱)</span>
+										<input type="number" name="pay_gcash" min="0" step="1" value="0"/>
+									</label>
+
+									<label class="inline-label">
+										<span>Maribank (₱)</span>
+										<input type="number" name="pay_maribank" min="0" step="1" value="0"/>
+									</label>
+
+									<label class="inline-label">
+										<span>Cash (₱)</span>
+										<input type="number" name="pay_cash" min="0" step="1" value="0"/>
+									</label>
+								</div>
+
+								<div class="form-actions">
+									<button type="submit">Record haircut</button>
+								</div>
+
+							</form>
+						</div>
+					</section>
+
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Today</h2>
+							<p class="panel-sub">
+								{ fmt.Sprintf("%d", len(haircuts)) } haircuts · net { domain.FormatCentavos(domain.SumNetCentavos(haircuts)) }
+							</p>
+						</div>
+
+						if len(haircuts) == 0 {
+							<div class="empty-state">
+								<p>No haircuts recorded yet today.</p>
+							</div>
+						} else {
+							<table class="data-table">
+								<thead>
+									<tr>
+										<th style="width: 80px;">Time</th>
+										<th>Barber</th>
+										<th>Service</th>
+										<th style="width: 100px;">Price</th>
+										<th style="width: 130px;">Discount</th>
+										<th style="width: 100px;">Net</th>
+										<th>Payments</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, h := range haircuts {
+										<tr>
+											<td class="data-mono">{ h.CreatedAt.Format("15:04") }</td>
+											<td>{ barberName[h.BarberID] }</td>
+											<td>{ serviceName[h.ServiceID] }</td>
+											<td>{ domain.FormatCentavos(h.PriceCentavos) }</td>
+											<td>
+												if h.DiscountCentavos > 0 {
+													<span class="data-strong">{ domain.FormatCentavos(h.DiscountCentavos) }</span>
+													if h.DiscountReason != "" {
+														<br/><small>({ h.DiscountReason })</small>
+													}
+												} else {
+													<span class="data-dim">—</span>
+												}
+											</td>
+											<td class="data-strong">{ domain.FormatCentavos(h.NetCentavos) }</td>
+											<td>
+												if len(h.Payments) == 0 {
+													<small>free</small>
+												} else {
+													for i, p := range h.Payments {
+														if i > 0 {
+															<br/>
+														}
+														<span class="pay-tag">{ string(p.Method) }</span>
+														{ domain.FormatCentavos(p.AmountCentavos) }
+													}
+												}
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+					</section>
+
+				</main>
+			</div>
 		</body>
 	</html>
 }

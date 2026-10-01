@@ -34,6 +34,7 @@ func NewRouter(h *Handlers) http.Handler {
 		r.Delete("/admin/services/{id}", h.AdminDeleteService)
 		r.Post("/admin/users/{id}/password", h.AdminResetPassword)
 		r.Get("/admin/haircuts", h.AdminHaircutsPage)
+		r.Get("/admin/cash-advances", h.AdminCashAdvancesPage)
 
 		// Counter (recording)
 		r.Get("/counter", h.CounterHome)

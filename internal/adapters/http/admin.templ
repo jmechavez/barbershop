@@ -10,266 +10,267 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<title>Admin — Barbershop</title>
+			<title>Admin · DRFT Barbershop</title>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<link rel="stylesheet" href="/static/style.css"/>
 			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
-			<style>
-				body { font-family: sans-serif; max-width: 1100px; margin: 40px auto; }
-				table { border-collapse: collapse; width: 100%; margin-top: 16px; }
-				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: middle; }
-				th { background: #f4f4f4; }
-				input[type=text], input[type=email], input[type=password] { box-sizing: border-box; padding: 4px; }
-				input[type=number] { width: 90px; padding: 4px; }
-				section { margin-top: 32px; }
-				small { color: #666; }
-			</style>
 		</head>
-		<body>
-			<h1>Admin</h1>
-			<p>Signed in as { user.FullName } ({ user.Email }) — { string(user.Role) }</p>
-			<section>
-				<h2>Staff</h2>
-				<table>
-					<tr>
-						<th style="width: 40px;">ID</th>
-						<th>Name</th>
-						<th>Email</th>
-						<th style="width: 100px;">Role</th>
-						<th style="width: 130px;">Daily minimum</th>
-						<th style="width: 280px;">Reset password</th>
-					</tr>
-					for _, u := range users {
-						<tr>
-							<td>{ fmt.Sprintf("%d", u.ID) }</td>
-							<td>{ u.FullName }</td>
-							<td>{ u.Email }</td>
-							<td>{ string(u.Role) }</td>
-							<td>{ domain.FormatCentavos(u.DailyFloorCentavos) }</td>
-							<td>
-								<form
-									method="post"
-									action={ fmt.Sprintf("/admin/users/%d/password", u.ID) }
-									style="margin: 0;"
-								>
-									<input
-										type="password"
-										name="new_password"
-										placeholder="New password"
-										required
-										minlength="6"
-										style="width: 140px;"
-									/>
-									<button
-										type="submit"
-										onclick="return confirm('Reset password for this user?');"
-									>
-										Reset
-									</button>
-								</form>
-							</td>
-						</tr>
-					}
-				</table>
-				<h3>Add a staff account</h3>
-				<form method="post" action="/admin/users">
-					<label>
-						Full name
-						<input
-							type="text"
-							name="full_name"
-							required
-							style="width: 200px;"
-						/>
-					</label>
-					<label>
-						Email
-						<input
-							type="email"
-							name="email"
-							required
-							style="width: 200px;"
-						/>
-					</label>
-					<label>
-						Password
-						<input
-							type="password"
-							name="password"
-							required
-							style="width: 160px;"
-						/>
-					</label>
-					<label>
-						Role
-						<select name="role">
-							<option value="barber">barber</option>
-							<option value="admin">admin</option>
-						</select>
-					</label>
-					<label>
-						Daily minimum (pesos)
-						<input
-							type="number"
-							name="daily_floor_pesos"
-							min="0"
-							value="500"
-							required
-							style="width: 90px;"
-						/>
-					</label>
-					<button type="submit">Create</button>
-				</form>
-			</section>
-			<section>
-				<h2>Cash advances (last 30 days)</h2>
-				if len(advances) == 0 {
-					<p>No cash advances in the last 30 days.</p>
-				} else {
-					<table>
-						<tr>
-							<th style="width: 70px;">ID</th>
-							<th>Barber</th>
-							<th style="width: 100px;">Amount</th>
-							<th style="width: 160px;">Date</th>
-							<th>Note</th>
-						</tr>
-						for _, a := range advances {
-							<tr>
-								<td>{ fmt.Sprintf("%d", a.ID) }</td>
-								<td>{ barberName[a.BarberID] }</td>
-								<td>{ domain.FormatCentavos(a.AmountCentavos) }</td>
-								<td>{ a.TakenAt.Format("Jan 2, 2006") }</td>
-								<td>{ a.Note }</td>
-							</tr>
-						}
-					</table>
-				}
-				<h3>Record a cash advance</h3>
-				<form method="post" action="/admin/cash-advances">
-					<label>
-						Barber
-						<select name="barber_id" required>
-							for _, u := range users {
-								if u.Role == domain.RoleBarber {
-									<option value={ fmt.Sprintf("%d", u.ID) }>{ u.FullName }</option>
-								}
+		<body class="app-page">
+			<div class="app-shell">
+
+				<nav class="app-nav">
+					<a href="/" class="app-nav-brand">DRFT</a>
+					<div class="app-nav-tabs">
+						<a href="/admin" class="active">Admin</a>
+						<a href="/counter">Counter</a>
+						<a href="/admin/haircuts">Haircuts</a>
+					</div>
+					<div class="app-nav-user">
+						<span>{ user.FullName }</span>
+						<form method="post" action="/logout">
+							<button type="submit">Logout</button>
+						</form>
+					</div>
+				</nav>
+
+				<main class="app-main">
+
+					<header class="app-header">
+						<h1 class="app-title">Admin</h1>
+						<p class="app-sub">Signed in as <strong>{ user.FullName }</strong> · { string(user.Role) }</p>
+					</header>
+
+					<!-- Staff -->
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Staff</h2>
+							<p class="panel-sub">{ fmt.Sprintf("%d", len(users)) } accounts</p>
+						</div>
+
+						<div class="panel-body panel-body-flush">
+							<table class="data-table">
+								<thead>
+									<tr>
+										<th style="width: 60px;">ID</th>
+										<th>Name</th>
+										<th>Email</th>
+										<th style="width: 100px;">Role</th>
+										<th style="width: 130px;">Daily min.</th>
+										<th style="width: 280px;">Reset password</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, u := range users {
+										<tr>
+											<td class="data-mono">{ fmt.Sprintf("%d", u.ID) }</td>
+											<td>{ u.FullName }</td>
+											<td class="data-dim">{ u.Email }</td>
+											<td>
+												if u.Role == domain.RoleAdmin {
+													<span class="role-badge role-admin">admin</span>
+												} else {
+													<span class="role-badge role-barber">barber</span>
+												}
+											</td>
+											<td>{ domain.FormatCentavos(u.DailyFloorCentavos) }</td>
+											<td>
+												<form method="post"
+												      action={ fmt.Sprintf("/admin/users/%d/password", u.ID) }
+												      class="row-form">
+													<input type="password" name="new_password" placeholder="New password"
+													       required minlength="6"
+													       class="row-input"/>
+													<button type="submit" class="btn-secondary"
+													        onclick="return confirm('Reset password for this user?');">
+														Reset
+													</button>
+												</form>
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+
+						<div class="panel-foot">
+							<form method="post" action="/admin/users" class="inline-form">
+								<label class="inline-label">
+									<span>Full name</span>
+									<input type="text" name="full_name" required/>
+								</label>
+								<label class="inline-label">
+									<span>Email</span>
+									<input type="email" name="email" required/>
+								</label>
+								<label class="inline-label">
+									<span>Password</span>
+									<input type="password" name="password" required/>
+								</label>
+								<label class="inline-label">
+									<span>Role</span>
+									<select name="role">
+										<option value="barber">barber</option>
+										<option value="admin">admin</option>
+									</select>
+								</label>
+								<label class="inline-label">
+									<span>Daily min (₱)</span>
+									<input type="number" name="daily_floor_pesos" min="0" value="500" required/>
+								</label>
+								<button type="submit">Add staff</button>
+							</form>
+						</div>
+					</section>
+
+					<!-- Cash advances -->
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Recent cash advances</h2>
+							<p class="panel-sub">Last 5 · <a href="/admin/cash-advances">View all →</a></p>
+						</div>
+
+						<div class="panel-body panel-body-flush">
+							if len(advances) == 0 {
+								<div class="empty-state">
+									<p>No cash advances yet.</p>
+								</div>
+							} else {
+								<table class="data-table">
+									<thead>
+										<tr>
+											<th style="width: 60px;">ID</th>
+											<th>Barber</th>
+											<th style="width: 110px;">Amount</th>
+											<th style="width: 150px;">Date</th>
+											<th>Note</th>
+										</tr>
+									</thead>
+									<tbody>
+										for _, a := range advances {
+											<tr>
+												<td class="data-mono">{ fmt.Sprintf("%d", a.ID) }</td>
+												<td>{ barberName[a.BarberID] }</td>
+												<td class="data-strong">{ domain.FormatCentavos(a.AmountCentavos) }</td>
+												<td class="data-dim">{ a.TakenAt.Format("Jan 2, 2006") }</td>
+												<td>{ a.Note }</td>
+											</tr>
+										}
+									</tbody>
+								</table>
 							}
-						</select>
-					</label>
-					<label style="margin-left: 20px;">
-						Amount (pesos)
-						<input
-							type="number"
-							name="amount_pesos"
-							min="1"
-							step="1"
-							required
-							style="width: 100px;"
-						/>
-					</label>
-					<label style="margin-left: 20px;">
-						Note
-						<input
-							type="text"
-							name="note"
-							placeholder="Reason (optional)"
-							style="width: 240px;"
-						/>
-					</label>
-					<button type="submit" style="margin-left: 20px;">Record</button>
-				</form>
-			</section>
-			<section>
-				<h2>Services</h2>
-				<table>
-					<tr>
-						<th style="width: 40px;">ID</th>
-						<th>Name</th>
-						<th style="width: 120px;">Price</th>
-						<th style="width: 120px;">Formatted</th>
-						<th style="width: 160px;"></th>
-					</tr>
-					for _, s := range services {
-						@ServiceRow(s)
-					}
-				</table>
-				<h3>Add a service</h3>
-				<form method="post" action="/admin/services">
-					<label>
-						Name
-						<input
-							type="text"
-							name="name"
-							required
-							style="width: 200px;"
-						/>
-					</label>
-					<label>
-						Price (pesos)
-						<input
-							type="number"
-							name="price_pesos"
-							min="0"
-							step="1"
-							required
-							style="width: 90px;"
-						/>
-					</label>
-					<button type="submit">Add</button>
-				</form>
-			</section>
-			<p style="margin-top: 32px;">
-				<a href="/counter">Counter</a> ·
-				<a href="/admin/haircuts">All haircuts</a> ·
-				<a href="/">Back to shop</a>
-			</p>
+						</div>
+
+						<div class="panel-foot">
+							<form method="post" action="/admin/cash-advances" class="inline-form">
+								<label class="inline-label">
+									<span>Barber</span>
+									<select name="barber_id" required>
+										for _, u := range users {
+											if u.Role == domain.RoleBarber {
+												<option value={ fmt.Sprintf("%d", u.ID) }>{ u.FullName }</option>
+											}
+										}
+									</select>
+								</label>
+								<label class="inline-label">
+									<span>Amount (₱)</span>
+									<input type="number" name="amount_pesos" min="1" step="1" required/>
+								</label>
+								<label class="inline-label">
+									<span>Note</span>
+									<input type="text" name="note" placeholder="Reason (optional)"/>
+								</label>
+								<button type="submit">Record advance</button>
+							</form>
+						</div>
+					</section>
+
+					<!-- Services -->
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Services</h2>
+							<p class="panel-sub">{ fmt.Sprintf("%d", len(services)) } services</p>
+						</div>
+
+						<div class="panel-body panel-body-flush">
+							<table class="data-table">
+								<thead>
+									<tr>
+										<th style="width: 60px;">ID</th>
+										<th>Name</th>
+										<th style="width: 130px;">Price (₱)</th>
+										<th style="width: 130px;">Formatted</th>
+										<th style="width: 180px;"></th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, s := range services {
+										@ServiceRow(s)
+									}
+								</tbody>
+							</table>
+						</div>
+
+						<div class="panel-foot">
+							<form method="post" action="/admin/services" class="inline-form">
+								<label class="inline-label">
+									<span>Name</span>
+									<input type="text" name="name" required/>
+								</label>
+								<label class="inline-label">
+									<span>Price (₱)</span>
+									<input type="number" name="price_pesos" min="0" step="1" required/>
+								</label>
+								<button type="submit">Add service</button>
+							</form>
+						</div>
+					</section>
+
+				</main>
+			</div>
 		</body>
 	</html>
 }
 
 templ ServiceRow(s domain.Service) {
 	<tr id={ fmt.Sprintf("service-%d", s.ID) }>
-		<td>{ fmt.Sprintf("%d", s.ID) }</td>
+		<td class="data-mono">{ fmt.Sprintf("%d", s.ID) }</td>
 		<td>
-			<input
-				type="text"
-				name="name"
-				form={ fmt.Sprintf("form-%d", s.ID) }
-				value={ s.Name }
-				required
-				style="width: 100%;"
-			/>
+			<input type="text"
+			       name="name"
+			       form={ fmt.Sprintf("form-%d", s.ID) }
+			       value={ s.Name }
+			       required
+			       class="row-input"/>
 		</td>
 		<td>
-			<input
-				type="number"
-				name="price_pesos"
-				form={ fmt.Sprintf("form-%d", s.ID) }
-				value={ fmt.Sprintf("%d", s.PriceCentavos/100) }
-				min="0"
-				step="1"
-				required
-			/>
+			<input type="number"
+			       name="price_pesos"
+			       form={ fmt.Sprintf("form-%d", s.ID) }
+			       value={ fmt.Sprintf("%d", s.PriceCentavos/100) }
+			       min="0"
+			       step="1"
+			       required
+			       class="row-input"/>
 		</td>
-		<td>{ s.FormatPrice() }</td>
-		<td style="white-space: nowrap;">
-			<form
-				id={ fmt.Sprintf("form-%d", s.ID) }
-				hx-post={ fmt.Sprintf("/admin/services/%d", s.ID) }
-				hx-target={ fmt.Sprintf("#service-%d", s.ID) }
-				hx-swap="outerHTML"
-				style="display: inline;"
-			>
-				<button type="submit">Save</button>
-			</form>
-			<button
-				hx-delete={ fmt.Sprintf("/admin/services/%d", s.ID) }
-				hx-target={ fmt.Sprintf("#service-%d", s.ID) }
-				hx-swap="outerHTML"
-				hx-confirm="Delete this service? This cannot be undone."
-				style="margin-left: 6px;"
-			>
-				Delete
-			</button>
+		<td class="data-strong">{ s.FormatPrice() }</td>
+		<td>
+			<div class="row-actions">
+				<form id={ fmt.Sprintf("form-%d", s.ID) }
+				      hx-post={ fmt.Sprintf("/admin/services/%d", s.ID) }
+				      hx-target={ fmt.Sprintf("#service-%d", s.ID) }
+				      hx-swap="outerHTML"
+				      style="display: contents;">
+					<button type="submit" class="btn-secondary">Save</button>
+				</form>
+				<button hx-delete={ fmt.Sprintf("/admin/services/%d", s.ID) }
+				        hx-target={ fmt.Sprintf("#service-%d", s.ID) }
+				        hx-swap="outerHTML"
+				        hx-confirm="Delete this service? This cannot be undone."
+				        class="btn-danger">
+					Delete
+				</button>
+			</div>
 		</td>
 	</tr>
 }

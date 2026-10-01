@@ -84,7 +84,13 @@ func (h *Handlers) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setSessionCookie(w, token)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+
+	// Send the user to the page they'll actually use.
+	if user.Role == domain.RoleAdmin {
+		http.Redirect(w, r, "/admin", http.StatusSeeOther)
+	} else {
+		http.Redirect(w, r, "/me", http.StatusSeeOther)
+	}
 }
 
 func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
@@ -117,9 +123,8 @@ func (h *Handlers) AdminHomePage(w http.ResponseWriter, r *http.Request) {
 		barberName[u.ID] = u.FullName
 	}
 
-	// Advances: combine recent advances for all barbers.
-	// Simple approach: fetch each barber's last 30 days.
-	var advances []domain.CashAdvance
+	// Collect recent advances, then keep only the newest 5 overall.
+	var allAdvances []domain.CashAdvance
 	for _, u := range users {
 		if u.Role != domain.RoleBarber {
 			continue
@@ -129,10 +134,17 @@ func (h *Handlers) AdminHomePage(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		advances = append(advances, as...)
+		allAdvances = append(allAdvances, as...)
 	}
 
-	AdminHome(user, services, users, advances, barberName).Render(r.Context(), w)
+	sort.Slice(allAdvances, func(i, j int) bool {
+		return allAdvances[i].TakenAt.After(allAdvances[j].TakenAt)
+	})
+	if len(allAdvances) > 5 {
+		allAdvances = allAdvances[:5]
+	}
+
+	AdminHome(user, services, users, allAdvances, barberName).Render(r.Context(), w)
 }
 
 func (h *Handlers) AdminUpdateService(w http.ResponseWriter, r *http.Request) {
@@ -251,12 +263,9 @@ func (h *Handlers) CounterHome(w http.ResponseWriter, r *http.Request) {
 	h.renderCounter(w, r, "")
 }
 
-// renderCounter is the shared body of GET /counter and of the POST
-// handler's failure path: build the page data and render it.
 func (h *Handlers) renderCounter(w http.ResponseWriter, r *http.Request, errorMsg string) {
 	admin, _ := CurrentUser(r.Context())
 
-	// Fetch all users, filter to barbers.
 	allUsers, err := h.Users.List(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -265,13 +274,12 @@ func (h *Handlers) renderCounter(w http.ResponseWriter, r *http.Request, errorMs
 	var barbers []domain.User
 	barberName := map[int]string{}
 	for _, u := range allUsers {
+		barberName[u.ID] = u.FullName
 		if u.Role == domain.RoleBarber {
 			barbers = append(barbers, u)
-			barberName[u.ID] = u.FullName
 		}
 	}
 
-	// Fetch services.
 	services, err := h.Services.List(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -282,7 +290,6 @@ func (h *Handlers) renderCounter(w http.ResponseWriter, r *http.Request, errorMs
 		serviceName[s.ID] = s.Name
 	}
 
-	// Fetch today's haircuts.
 	haircuts, err := h.Haircuts.TodayAll(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -617,5 +624,91 @@ func (h *Handlers) AdminHaircutsPage(w http.ResponseWriter, r *http.Request) {
 		admin, barbers, haircuts,
 		barberName, serviceName,
 		fromStr, toStr, selectedBarberID,
+	).Render(r.Context(), w)
+}
+
+func (h *Handlers) AdminCashAdvancesPage(w http.ResponseWriter, r *http.Request) {
+	admin, _ := CurrentUser(r.Context())
+
+	// Barbers for the filter dropdown.
+	allUsers, err := h.Users.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var barbers []domain.User
+	barberName := map[int]string{}
+	for _, u := range allUsers {
+		barberName[u.ID] = u.FullName
+		if u.Role == domain.RoleBarber {
+			barbers = append(barbers, u)
+		}
+	}
+
+	// Date range from query string.
+	now := time.Now()
+	fromStr := r.URL.Query().Get("from")
+	toStr := r.URL.Query().Get("to")
+	barberStr := r.URL.Query().Get("barber_id")
+
+	if fromStr == "" {
+		fromStr = now.AddDate(0, 0, -30).Format("2006-01-02")
+	}
+	if toStr == "" {
+		toStr = now.Format("2006-01-02")
+	}
+
+	from, err := time.ParseInLocation("2006-01-02", fromStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad from date", http.StatusBadRequest)
+		return
+	}
+	to, err := time.ParseInLocation("2006-01-02", toStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad to date", http.StatusBadRequest)
+		return
+	}
+	if to.Before(from) {
+		http.Error(w, "to date is before from date", http.StatusBadRequest)
+		return
+	}
+	toExclusive := to.AddDate(0, 0, 1)
+
+	selectedBarberID := 0
+	if barberStr != "" {
+		selectedBarberID, _ = strconv.Atoi(barberStr)
+	}
+
+	// Fetch advances. If a barber is selected, use that one only.
+	// Otherwise, gather from all barbers.
+	var advances []domain.CashAdvance
+	if selectedBarberID > 0 {
+		as, err := h.CashAdvances.ListRange(r.Context(), selectedBarberID, from, toExclusive)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		advances = as
+	} else {
+		for _, b := range barbers {
+			as, err := h.CashAdvances.ListRange(r.Context(), b.ID, from, toExclusive)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			advances = append(advances, as...)
+		}
+	}
+
+	// Newest first.
+	sort.Slice(advances, func(i, j int) bool {
+		return advances[i].TakenAt.After(advances[j].TakenAt)
+	})
+
+	total := domain.SumAdvances(advances)
+
+	CashAdvancesPage(
+		admin, barbers, advances,
+		barberName, fromStr, toStr, selectedBarberID, total,
 	).Render(r.Context(), w)
 }

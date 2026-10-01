@@ -26,17 +26,23 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 						<span></span><span></span><span></span>
 					</button>
 					<div class="nav-links">
-						<a href="#about">About</a>
-						<a href="#menu">Menu</a>
-						if loggedIn {
-							<a href="/me">{ user.FullName }</a>
-							<form method="post" action="/logout">
-								<button type="submit">Logout</button>
-							</form>
-						} else {
-							<a href="/login">Login</a>
-						}
-					</div>
+	<a href="#about">About</a>
+	<a href="#menu">Menu</a>
+	if loggedIn {
+		if user.Role == domain.RoleAdmin {
+			<a href="/admin">Admin</a>
+			<a href="/counter">Counter</a>
+		} else {
+			<a href="/me">My page</a>
+			<a href="/me/salary">Salary</a>
+		}
+		<form method="post" action="/logout">
+			<button type="submit">Logout</button>
+		</form>
+	} else {
+		<a href="/login">Login</a>
+	}
+</div>
 				</div>
 			</nav>
 

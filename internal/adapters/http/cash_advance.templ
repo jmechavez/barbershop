@@ -1,0 +1,131 @@
+package http
+
+import (
+	"fmt"
+
+	"barbershop/internal/domain"
+)
+
+templ CashAdvancesPage(
+	admin domain.User,
+	barbers []domain.User,
+	advances []domain.CashAdvance,
+	barberName map[int]string,
+	fromStr, toStr string,
+	selectedBarberID int,
+	totalCentavos int,
+) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>Cash Advances · DRFT Barbershop</title>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<link rel="stylesheet" href="/static/style.css"/>
+		</head>
+		<body class="app-page">
+			<div class="app-shell">
+
+				<nav class="app-nav">
+					<a href="/" class="app-nav-brand">DRFT</a>
+					<div class="app-nav-tabs">
+						<a href="/admin">Admin</a>
+						<a href="/counter">Counter</a>
+						<a href="/admin/haircuts">Haircuts</a>
+						<a href="/admin/cash-advances" class="active">Advances</a>
+					</div>
+					<div class="app-nav-user">
+						<span>{ admin.FullName }</span>
+						<form method="post" action="/logout">
+							<button type="submit">Logout</button>
+						</form>
+					</div>
+				</nav>
+
+				<main class="app-main">
+
+					<header class="app-header">
+						<h1 class="app-title">Cash advances</h1>
+						<p class="app-sub">
+							From <strong>{ fromStr }</strong> to <strong>{ toStr }</strong>
+						</p>
+					</header>
+
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Filter</h2>
+						</div>
+						<div class="panel-body">
+							<form method="get" action="/admin/cash-advances" class="inline-form">
+								<label class="inline-label">
+									<span>Barber</span>
+									<select name="barber_id">
+										if selectedBarberID == 0 {
+											<option value="0" selected>All barbers</option>
+										} else {
+											<option value="0">All barbers</option>
+										}
+										for _, b := range barbers {
+											if b.ID == selectedBarberID {
+												<option value={ fmt.Sprintf("%d", b.ID) } selected>{ b.FullName }</option>
+											} else {
+												<option value={ fmt.Sprintf("%d", b.ID) }>{ b.FullName }</option>
+											}
+										}
+									</select>
+								</label>
+								<label class="inline-label">
+									<span>From</span>
+									<input type="date" name="from" value={ fromStr } required/>
+								</label>
+								<label class="inline-label">
+									<span>To</span>
+									<input type="date" name="to" value={ toStr } required/>
+								</label>
+								<button type="submit">Show</button>
+							</form>
+						</div>
+					</section>
+
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Advances</h2>
+							<p class="panel-sub">
+								{ fmt.Sprintf("%d", len(advances)) } entries · total <strong>{ domain.FormatCentavos(totalCentavos) }</strong>
+							</p>
+						</div>
+
+						if len(advances) == 0 {
+							<div class="empty-state">
+								<p>No cash advances in this range.</p>
+							</div>
+						} else {
+							<table class="data-table">
+								<thead>
+									<tr>
+										<th style="width: 60px;">ID</th>
+										<th>Barber</th>
+										<th style="width: 120px;">Amount</th>
+										<th style="width: 160px;">Date</th>
+										<th>Note</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, a := range advances {
+										<tr>
+											<td class="data-mono">{ fmt.Sprintf("%d", a.ID) }</td>
+											<td>{ barberName[a.BarberID] }</td>
+											<td class="data-strong">{ domain.FormatCentavos(a.AmountCentavos) }</td>
+											<td class="data-dim">{ a.TakenAt.Format("Jan 2, 2006") }</td>
+											<td>{ a.Note }</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+					</section>
+
+				</main>
+			</div>
+		</body>
+	</html>
+}

@@ -10,118 +10,151 @@ templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]st
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<title>My page — Barbershop</title>
-			<style>
-				body { font-family: sans-serif; max-width: 800px; margin: 40px auto; }
-				.topbar { text-align: right; margin-bottom: 20px; }
-				.topbar form { display: inline; margin: 0; padding: 0; }
-				.topbar button { background: none; border: none; color: #0000ee;
-				                 text-decoration: underline; cursor: pointer;
-				                 font: inherit; padding: 0; }
-				table { border-collapse: collapse; width: 100%; margin-top: 16px; }
-				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: middle; }
-				.summary { margin-top: 16px; font-size: 1.1em; }
-				.summary strong { font-size: 1.3em; }
-				small { color: #666; }
-				section { margin-top: 32px; }
-			</style>
+			<title>My Page · DRFT Barbershop</title>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<link rel="stylesheet" href="/static/style.css"/>
 		</head>
-		<body>
-			<div class="topbar">
-				<span>{ user.FullName }</span>
-				<form method="post" action="/logout">
-					<button type="submit">Logout</button>
-				</form>
+		<body class="app-page">
+			<div class="app-shell">
+
+				<nav class="app-nav">
+					<a href="/" class="app-nav-brand">DRFT</a>
+					<div class="app-nav-tabs">
+						<a href="/me" class="active">My page</a>
+						<a href="/me/salary">Salary</a>
+					</div>
+					<div class="app-nav-user">
+						<span>{ user.FullName }</span>
+						<form method="post" action="/logout">
+							<button type="submit">Logout</button>
+						</form>
+					</div>
+				</nav>
+
+				<main class="app-main">
+
+					<header class="app-header">
+						<h1 class="app-title">Hello, { user.FullName }</h1>
+						<p class="app-sub">Today at a glance</p>
+					</header>
+
+					<!-- Stats -->
+					<section class="stats-row">
+						<div class="stat-card">
+							<div class="stat-label">Haircuts</div>
+							<div class="stat-value">{ fmt.Sprintf("%d", len(haircuts)) }</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-label">List total</div>
+							<div class="stat-value">{ domain.FormatCentavos(domain.SumListCentavos(haircuts)) }</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-label">Net collected</div>
+							<div class="stat-value">{ domain.FormatCentavos(domain.SumNetCentavos(haircuts)) }</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-label">Advances (30d)</div>
+							<div class="stat-value">{ domain.FormatCentavos(domain.SumAdvances(advances)) }</div>
+						</div>
+					</section>
+
+					<!-- Today's haircuts -->
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Today</h2>
+							<p class="panel-sub">
+								{ fmt.Sprintf("%d", len(haircuts)) } haircuts · net { domain.FormatCentavos(domain.SumNetCentavos(haircuts)) }
+							</p>
+						</div>
+
+						if len(haircuts) == 0 {
+							<div class="empty-state">
+								<p>No haircuts recorded yet today.</p>
+							</div>
+						} else {
+							<table class="data-table">
+								<thead>
+									<tr>
+										<th style="width: 80px;">Time</th>
+										<th>Service</th>
+										<th style="width: 100px;">Price</th>
+										<th style="width: 130px;">Discount</th>
+										<th style="width: 100px;">Net</th>
+										<th>Payments</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, h := range haircuts {
+										<tr>
+											<td class="data-mono">{ h.CreatedAt.Format("15:04") }</td>
+											<td>{ serviceName[h.ServiceID] }</td>
+											<td>{ domain.FormatCentavos(h.PriceCentavos) }</td>
+											<td>
+												if h.DiscountCentavos > 0 {
+													<span class="data-strong">{ domain.FormatCentavos(h.DiscountCentavos) }</span>
+													if h.DiscountReason != "" {
+														<br/><small>({ h.DiscountReason })</small>
+													}
+												} else {
+													<span class="data-dim">—</span>
+												}
+											</td>
+											<td class="data-strong">{ domain.FormatCentavos(h.NetCentavos) }</td>
+											<td>
+												if len(h.Payments) == 0 {
+													<small>free</small>
+												} else {
+													for i, p := range h.Payments {
+														if i > 0 {
+															<br/>
+														}
+														<span class="pay-tag">{ string(p.Method) }</span>
+														{ domain.FormatCentavos(p.AmountCentavos) }
+													}
+												}
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+					</section>
+
+					<!-- Cash advances -->
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Cash advances</h2>
+							<p class="panel-sub">Last 30 days · total { domain.FormatCentavos(domain.SumAdvances(advances)) }</p>
+						</div>
+
+						if len(advances) == 0 {
+							<div class="empty-state">
+								<p>No cash advances in the last 30 days.</p>
+							</div>
+						} else {
+							<table class="data-table">
+								<thead>
+									<tr>
+										<th style="width: 160px;">Date</th>
+										<th style="width: 120px;">Amount</th>
+										<th>Note</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, a := range advances {
+										<tr>
+											<td class="data-dim">{ a.TakenAt.Format("Jan 2, 2006") }</td>
+											<td class="data-strong">{ domain.FormatCentavos(a.AmountCentavos) }</td>
+											<td>{ a.Note }</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+					</section>
+
+				</main>
 			</div>
-
-			<h1>Hello, { user.FullName }</h1>
-			<p><a href="/me/salary">View salary →</a></p>
-			<p>Today is a good day to look sharp.</p>
-
-			<section>
-				<h2>Today</h2>
-
-				if len(haircuts) == 0 {
-					<p>No haircuts recorded yet today.</p>
-				} else {
-					<p class="summary">
-						Haircuts: <strong>{ fmt.Sprintf("%d", len(haircuts)) }</strong>
-						&nbsp;·&nbsp;
-						Total list price: <strong>{ domain.FormatCentavos(domain.SumListCentavos(haircuts)) }</strong>
-						&nbsp;·&nbsp;
-						Net collected: <strong>{ domain.FormatCentavos(domain.SumNetCentavos(haircuts)) }</strong>
-					</p>
-
-					<table>
-						<tr>
-							<th>Service</th>
-							<th style="width: 90px;">Price</th>
-							<th style="width: 130px;">Discount</th>
-							<th style="width: 90px;">Net</th>
-							<th>Payments</th>
-						</tr>
-						for _, h := range haircuts {
-							<tr>
-								<td>{ serviceName[h.ServiceID] }</td>
-								<td>{ domain.FormatCentavos(h.PriceCentavos) }</td>
-								<td>
-									if h.DiscountCentavos > 0 {
-										{ domain.FormatCentavos(h.DiscountCentavos) }
-										if h.DiscountReason != "" {
-											<br/><small>({ h.DiscountReason })</small>
-										}
-									} else {
-										—
-									}
-								</td>
-								<td>{ domain.FormatCentavos(h.NetCentavos) }</td>
-								<td>
-									if len(h.Payments) == 0 {
-										<small>(free)</small>
-									} else {
-										for i, p := range h.Payments {
-											if i > 0 {
-												<br/>
-											}
-											{ string(p.Method) }: { domain.FormatCentavos(p.AmountCentavos) }
-										}
-									}
-								</td>
-							</tr>
-						}
-					</table>
-				}
-			</section>
-
-			<section>
-				<h2>Cash advances (last 30 days)</h2>
-				if len(advances) == 0 {
-					<p>No cash advances in the last 30 days.</p>
-				} else {
-					<p class="summary">
-						Total: <strong>{ domain.FormatCentavos(domain.SumAdvances(advances)) }</strong>
-						&nbsp;·&nbsp;
-						Count: <strong>{ fmt.Sprintf("%d", len(advances)) }</strong>
-					</p>
-
-					<table>
-						<tr>
-							<th style="width: 170px;">Date</th>
-							<th style="width: 100px;">Amount</th>
-							<th>Note</th>
-						</tr>
-						for _, a := range advances {
-							<tr>
-								<td>{ a.TakenAt.Format("Jan 2, 2006") }</td>
-								<td>{ domain.FormatCentavos(a.AmountCentavos) }</td>
-								<td>{ a.Note }</td>
-							</tr>
-						}
-					</table>
-				}
-			</section>
-
-			<p style="margin-top: 32px;"><a href="/">Back to shop</a></p>
 		</body>
 	</html>
 }

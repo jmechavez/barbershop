@@ -12,6 +12,10 @@ func NewRouter(h *Handlers) http.Handler {
 	r := chi.NewRouter()
 	r.Use(h.LoadUser)
 
+	// Static files
+	fs := http.FileServer(http.Dir("static"))
+	r.Handle("/static/*", http.StripPrefix("/static/", fs))
+
 	// Public routes
 	r.Get("/", h.Public)
 	r.Post("/pick", h.Pick)

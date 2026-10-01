@@ -49,7 +49,7 @@ func (h *Handlers) Pick(w http.ResponseWriter, r *http.Request) {
 	}
 
 	total := domain.TotalCentavos(picked)
-	fmt.Fprintf(w, "Total: %s", domain.FormatCentavos(total))
+	fmt.Fprintf(w, "%s", domain.FormatCentavos(total))
 }
 
 func (h *Handlers) LoginForm(w http.ResponseWriter, r *http.Request) {

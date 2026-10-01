@@ -13,10 +13,11 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 			<title>Admin — Barbershop</title>
 			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
 			<style>
-				body { font-family: sans-serif; max-width: 900px; margin: 40px auto; }
+				body { font-family: sans-serif; max-width: 1100px; margin: 40px auto; }
 				table { border-collapse: collapse; width: 100%; margin-top: 16px; }
 				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: middle; }
-				input[type=text], input[type=email], input[type=password] { width: 100%; box-sizing: border-box; padding: 4px; }
+				th { background: #f4f4f4; }
+				input[type=text], input[type=email], input[type=password] { box-sizing: border-box; padding: 4px; }
 				input[type=number] { width: 90px; padding: 4px; }
 				section { margin-top: 32px; }
 				small { color: #666; }
@@ -25,7 +26,6 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 		<body>
 			<h1>Admin</h1>
 			<p>Signed in as { user.FullName } ({ user.Email }) — { string(user.Role) }</p>
-
 			<section>
 				<h2>Staff</h2>
 				<table>
@@ -35,6 +35,7 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 						<th>Email</th>
 						<th style="width: 100px;">Role</th>
 						<th style="width: 130px;">Daily minimum</th>
+						<th style="width: 280px;">Reset password</th>
 					</tr>
 					for _, u := range users {
 						<tr>
@@ -43,26 +44,59 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 							<td>{ u.Email }</td>
 							<td>{ string(u.Role) }</td>
 							<td>{ domain.FormatCentavos(u.DailyFloorCentavos) }</td>
+							<td>
+								<form
+									method="post"
+									action={ fmt.Sprintf("/admin/users/%d/password", u.ID) }
+									style="margin: 0;"
+								>
+									<input
+										type="password"
+										name="new_password"
+										placeholder="New password"
+										required
+										minlength="6"
+										style="width: 140px;"
+									/>
+									<button
+										type="submit"
+										onclick="return confirm('Reset password for this user?');"
+									>
+										Reset
+									</button>
+								</form>
+							</td>
 						</tr>
 					}
 				</table>
-
 				<h3>Add a staff account</h3>
 				<form method="post" action="/admin/users">
 					<label>
 						Full name
-						<input type="text" name="full_name" required
-						       style="width: 200px; box-sizing: border-box; padding: 4px;"/>
+						<input
+							type="text"
+							name="full_name"
+							required
+							style="width: 200px;"
+						/>
 					</label>
 					<label>
 						Email
-						<input type="email" name="email" required
-						       style="width: 200px; box-sizing: border-box; padding: 4px;"/>
+						<input
+							type="email"
+							name="email"
+							required
+							style="width: 200px;"
+						/>
 					</label>
 					<label>
 						Password
-						<input type="password" name="password" required
-						       style="width: 160px; box-sizing: border-box; padding: 4px;"/>
+						<input
+							type="password"
+							name="password"
+							required
+							style="width: 160px;"
+						/>
 					</label>
 					<label>
 						Role
@@ -73,13 +107,18 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 					</label>
 					<label>
 						Daily minimum (pesos)
-						<input type="number" name="daily_floor_pesos" min="0" value="500" required
-						       style="width: 90px; padding: 4px;"/>
+						<input
+							type="number"
+							name="daily_floor_pesos"
+							min="0"
+							value="500"
+							required
+							style="width: 90px;"
+						/>
 					</label>
 					<button type="submit">Create</button>
 				</form>
 			</section>
-
 			<section>
 				<h2>Cash advances (last 30 days)</h2>
 				if len(advances) == 0 {
@@ -104,7 +143,6 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 						}
 					</table>
 				}
-
 				<h3>Record a cash advance</h3>
 				<form method="post" action="/admin/cash-advances">
 					<label>
@@ -119,18 +157,27 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 					</label>
 					<label style="margin-left: 20px;">
 						Amount (pesos)
-						<input type="number" name="amount_pesos" min="1" step="1" required
-						       style="width: 100px; padding: 4px;"/>
+						<input
+							type="number"
+							name="amount_pesos"
+							min="1"
+							step="1"
+							required
+							style="width: 100px;"
+						/>
 					</label>
 					<label style="margin-left: 20px;">
 						Note
-						<input type="text" name="note" placeholder="Reason (optional)"
-						       style="width: 240px; padding: 4px;"/>
+						<input
+							type="text"
+							name="note"
+							placeholder="Reason (optional)"
+							style="width: 240px;"
+						/>
 					</label>
 					<button type="submit" style="margin-left: 20px;">Record</button>
 				</form>
 			</section>
-
 			<section>
 				<h2>Services</h2>
 				<table>
@@ -139,30 +186,42 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 						<th>Name</th>
 						<th style="width: 120px;">Price</th>
 						<th style="width: 120px;">Formatted</th>
-						<th style="width: 90px;"></th>
+						<th style="width: 160px;"></th>
 					</tr>
 					for _, s := range services {
 						@ServiceRow(s)
 					}
 				</table>
-
 				<h3>Add a service</h3>
 				<form method="post" action="/admin/services">
 					<label>
 						Name
-						<input type="text" name="name" required
-						       style="width: 200px; box-sizing: border-box; padding: 4px;"/>
+						<input
+							type="text"
+							name="name"
+							required
+							style="width: 200px;"
+						/>
 					</label>
 					<label>
 						Price (pesos)
-						<input type="number" name="price_pesos" min="0" step="1" required
-						       style="width: 90px; padding: 4px;"/>
+						<input
+							type="number"
+							name="price_pesos"
+							min="0"
+							step="1"
+							required
+							style="width: 90px;"
+						/>
 					</label>
 					<button type="submit">Add</button>
 				</form>
 			</section>
-
-			<p style="margin-top: 32px;"><a href="/counter">Counter</a> · <a href="/">Back to shop</a></p>
+			<p style="margin-top: 32px;">
+				<a href="/counter">Counter</a> ·
+				<a href="/admin/haircuts">All haircuts</a> ·
+				<a href="/">Back to shop</a>
+			</p>
 		</body>
 	</html>
 }
@@ -171,29 +230,46 @@ templ ServiceRow(s domain.Service) {
 	<tr id={ fmt.Sprintf("service-%d", s.ID) }>
 		<td>{ fmt.Sprintf("%d", s.ID) }</td>
 		<td>
-			<input type="text"
-			       name="name"
-			       form={ fmt.Sprintf("form-%d", s.ID) }
-			       value={ s.Name }
-			       required/>
+			<input
+				type="text"
+				name="name"
+				form={ fmt.Sprintf("form-%d", s.ID) }
+				value={ s.Name }
+				required
+				style="width: 100%;"
+			/>
 		</td>
 		<td>
-			<input type="number"
-			       name="price_pesos"
-			       form={ fmt.Sprintf("form-%d", s.ID) }
-			       value={ fmt.Sprintf("%d", s.PriceCentavos/100) }
-			       min="0"
-			       step="1"
-			       required/>
+			<input
+				type="number"
+				name="price_pesos"
+				form={ fmt.Sprintf("form-%d", s.ID) }
+				value={ fmt.Sprintf("%d", s.PriceCentavos/100) }
+				min="0"
+				step="1"
+				required
+			/>
 		</td>
 		<td>{ s.FormatPrice() }</td>
-		<td>
-			<form id={ fmt.Sprintf("form-%d", s.ID) }
-			      hx-post={ fmt.Sprintf("/admin/services/%d", s.ID) }
-			      hx-target={ fmt.Sprintf("#service-%d", s.ID) }
-			      hx-swap="outerHTML">
+		<td style="white-space: nowrap;">
+			<form
+				id={ fmt.Sprintf("form-%d", s.ID) }
+				hx-post={ fmt.Sprintf("/admin/services/%d", s.ID) }
+				hx-target={ fmt.Sprintf("#service-%d", s.ID) }
+				hx-swap="outerHTML"
+				style="display: inline;"
+			>
 				<button type="submit">Save</button>
 			</form>
+			<button
+				hx-delete={ fmt.Sprintf("/admin/services/%d", s.ID) }
+				hx-target={ fmt.Sprintf("#service-%d", s.ID) }
+				hx-swap="outerHTML"
+				hx-confirm="Delete this service? This cannot be undone."
+				style="margin-left: 6px;"
+			>
+				Delete
+			</button>
 		</td>
 	</tr>
 }

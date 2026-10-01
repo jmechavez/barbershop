@@ -22,6 +22,7 @@ type ServiceRepository interface {
 	List(ctx context.Context) ([]domain.Service, error)
 	Create(ctx context.Context, name string, priceCentavos int) (domain.Service, error)
 	Update(ctx context.Context, id int, name string, priceCentavos int) error
+	Delete(ctx context.Context, id int) error
 }
 
 // UserRepository is a driven port for staff accounts.
@@ -30,6 +31,7 @@ type UserRepository interface {
 	FindByID(ctx context.Context, id int) (domain.User, error)
 	List(ctx context.Context) ([]domain.User, error)
 	Create(ctx context.Context, email string, fullName string, passwordHash string, role domain.Role, dailyFloorCentavos int) (domain.User, error)
+	UpdatePassword(ctx context.Context, userID int, passwordHash string) error
 }
 
 // PasswordHasher is a driven port for hashing and verifying passwords.
@@ -51,6 +53,7 @@ type HaircutRepository interface {
 	ListByBarber(ctx context.Context, barberID int, since time.Time) ([]domain.Haircut, error)
 	ListAll(ctx context.Context, since time.Time) ([]domain.Haircut, error)
 	ListByBarberRange(ctx context.Context, barberID int, from, to time.Time) ([]domain.Haircut, error)
+	ListAllRange(ctx context.Context, from, to time.Time) ([]domain.Haircut, error)
 }
 
 type CashAdvanceRepository interface {

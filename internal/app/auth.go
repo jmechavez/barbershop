@@ -39,3 +39,12 @@ func (s *AuthService) CreateUser(ctx context.Context, email string, fullName str
 	}
 	return s.Users.Create(ctx, email, fullName, hash, role, dailyFloorCentavos)
 }
+
+// ResetPassword replaces a user's password hash with a new one.
+func (s *AuthService) ResetPassword(ctx context.Context, userID int, newPassword string) error {
+	hash, err := s.Hasher.Hash(newPassword)
+	if err != nil {
+		return err
+	}
+	return s.Users.UpdatePassword(ctx, userID, hash)
+}

@@ -1,0 +1,131 @@
+package http
+
+import (
+	"fmt"
+
+	"barbershop/internal/domain"
+)
+
+templ HaircutsPage(
+	admin domain.User,
+	barbers []domain.User,
+	haircuts []domain.Haircut,
+	barberName map[int]string,
+	serviceName map[int]string,
+	fromStr, toStr string,
+	selectedBarberID int,
+) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>Haircuts — Barbershop</title>
+			<style>
+				body { font-family: sans-serif; max-width: 1100px; margin: 40px auto; }
+				.topbar { text-align: right; margin-bottom: 20px; }
+				.topbar form { display: inline; margin: 0; padding: 0; }
+				.topbar button { background: none; border: none; color: #0000ee;
+				                 text-decoration: underline; cursor: pointer;
+				                 font: inherit; padding: 0; }
+				table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: middle; }
+				th { background: #f4f4f4; }
+				small { color: #666; }
+				.summary { margin-top: 16px; padding: 12px; background: #f9f9f9; border: 1px solid #ddd; }
+				.summary strong { font-size: 1.1em; }
+			</style>
+		</head>
+		<body>
+			<div class="topbar">
+				<span>{ admin.FullName }</span>
+				<form method="post" action="/logout">
+					<button type="submit">Logout</button>
+				</form>
+			</div>
+
+			<h1>All haircuts</h1>
+			<p><a href="/admin">← Back to admin</a></p>
+
+			<form method="get" action="/admin/haircuts">
+				<label>
+					Barber
+					<select name="barber_id">
+						<option value="0">All barbers</option>
+						for _, b := range barbers {
+							if b.ID == selectedBarberID {
+								<option value={ fmt.Sprintf("%d", b.ID) } selected>{ b.FullName }</option>
+							} else {
+								<option value={ fmt.Sprintf("%d", b.ID) }>{ b.FullName }</option>
+							}
+						}
+					</select>
+				</label>
+				<label style="margin-left: 12px;">
+					From
+					<input type="date" name="from" value={ fromStr } required/>
+				</label>
+				<label style="margin-left: 12px;">
+					To
+					<input type="date" name="to" value={ toStr } required/>
+				</label>
+				<button type="submit" style="margin-left: 12px;">Show</button>
+			</form>
+
+			if len(haircuts) == 0 {
+				<p style="margin-top: 24px;">No haircuts in this range.</p>
+			} else {
+				<p class="summary">
+					Haircuts: <strong>{ fmt.Sprintf("%d", len(haircuts)) }</strong>
+					&nbsp;·&nbsp;
+					List total: <strong>{ domain.FormatCentavos(domain.SumListCentavos(haircuts)) }</strong>
+					&nbsp;·&nbsp;
+					Net collected: <strong>{ domain.FormatCentavos(domain.SumNetCentavos(haircuts)) }</strong>
+				</p>
+
+				<table>
+					<tr>
+						<th style="width: 160px;">Date &amp; time</th>
+						<th>Barber</th>
+						<th>Service</th>
+						<th style="width: 90px;">Price</th>
+						<th style="width: 130px;">Discount</th>
+						<th style="width: 90px;">Net</th>
+						<th>Payments</th>
+					</tr>
+					for _, h := range haircuts {
+						<tr>
+							<td>{ h.CreatedAt.Format("Jan 2 15:04") }</td>
+							<td>{ barberName[h.BarberID] }</td>
+							<td>{ serviceName[h.ServiceID] }</td>
+							<td>{ domain.FormatCentavos(h.PriceCentavos) }</td>
+							<td>
+								if h.DiscountCentavos > 0 {
+									{ domain.FormatCentavos(h.DiscountCentavos) }
+									if h.DiscountReason != "" {
+										<br/><small>({ h.DiscountReason })</small>
+									}
+								} else {
+									—
+								}
+							</td>
+							<td>{ domain.FormatCentavos(h.NetCentavos) }</td>
+							<td>
+								if len(h.Payments) == 0 {
+									<small>(free)</small>
+								} else {
+									for i, p := range h.Payments {
+										if i > 0 {
+											<br/>
+										}
+										{ string(p.Method) }: { domain.FormatCentavos(p.AmountCentavos) }
+									}
+								}
+							</td>
+						</tr>
+					}
+				</table>
+			}
+
+			<p style="margin-top: 32px;"><a href="/">Back to shop</a></p>
+		</body>
+	</html>
+}

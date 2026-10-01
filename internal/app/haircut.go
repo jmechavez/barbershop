@@ -112,3 +112,13 @@ func startOfToday() time.Time {
 	now := time.Now()
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 }
+
+// Range returns haircuts across all barbers between from and to (exclusive).
+func (s *HaircutService) Range(ctx context.Context, from, to time.Time) ([]domain.Haircut, error) {
+	return s.Haircuts.ListAllRange(ctx, from, to)
+}
+
+// RangeForBarber returns haircuts for a specific barber between from and to.
+func (s *HaircutService) RangeForBarber(ctx context.Context, barberID int, from, to time.Time) ([]domain.Haircut, error) {
+	return s.Haircuts.ListByBarberRange(ctx, barberID, from, to)
+}

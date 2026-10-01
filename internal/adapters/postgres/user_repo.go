@@ -101,4 +101,12 @@ func (r *UserRepo) Create(ctx context.Context, email string, fullName string, pa
 	return u, nil
 }
 
+func (r *UserRepo) UpdatePassword(ctx context.Context, userID int, passwordHash string) error {
+	_, err := r.DB.Exec(ctx,
+		`UPDATE users SET password_hash = $1 WHERE id = $2`,
+		passwordHash, userID,
+	)
+	return err
+}
+
 var _ ports.UserRepository = (*UserRepo)(nil)

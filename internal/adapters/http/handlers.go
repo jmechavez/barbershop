@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -486,4 +487,135 @@ func (h *Handlers) MeSalaryPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SalaryPage(user, summary, fromStr, toStr).Render(r.Context(), w)
+}
+
+func (h *Handlers) AdminDeleteService(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Services.Delete(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// htmx will remove the row from the page.
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handlers) AdminResetPassword(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	userID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "bad user id", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+
+	newPassword := r.FormValue("new_password")
+	if len(newPassword) < 6 {
+		http.Error(w, "password must be at least 6 characters", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Auth.ResetPassword(r.Context(), userID, newPassword); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+func (h *Handlers) AdminHaircutsPage(w http.ResponseWriter, r *http.Request) {
+	admin, _ := CurrentUser(r.Context())
+
+	// All users (to build the barber filter dropdown and name map).
+	allUsers, err := h.Users.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var barbers []domain.User
+	barberName := map[int]string{}
+	for _, u := range allUsers {
+		barberName[u.ID] = u.FullName
+		if u.Role == domain.RoleBarber {
+			barbers = append(barbers, u)
+		}
+	}
+
+	// Services (for name display).
+	services, err := h.Services.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	serviceName := map[int]string{}
+	for _, s := range services {
+		serviceName[s.ID] = s.Name
+	}
+
+	// Date range and barber filter from query string.
+	now := time.Now()
+	fromStr := r.URL.Query().Get("from")
+	toStr := r.URL.Query().Get("to")
+	barberStr := r.URL.Query().Get("barber_id")
+
+	if fromStr == "" {
+		fromStr = now.Format("2006-01-02")
+	}
+	if toStr == "" {
+		toStr = now.Format("2006-01-02")
+	}
+
+	from, err := time.ParseInLocation("2006-01-02", fromStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad from date", http.StatusBadRequest)
+		return
+	}
+	to, err := time.ParseInLocation("2006-01-02", toStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad to date", http.StatusBadRequest)
+		return
+	}
+	if to.Before(from) {
+		http.Error(w, "to date is before from date", http.StatusBadRequest)
+		return
+	}
+	toExclusive := to.AddDate(0, 0, 1)
+
+	selectedBarberID := 0
+	if barberStr != "" {
+		selectedBarberID, _ = strconv.Atoi(barberStr)
+	}
+
+	// Fetch haircuts.
+	var haircuts []domain.Haircut
+	if selectedBarberID > 0 {
+		haircuts, err = h.Haircuts.RangeForBarber(r.Context(), selectedBarberID, from, toExclusive)
+	} else {
+		haircuts, err = h.Haircuts.Range(r.Context(), from, toExclusive)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Newest first, always — regardless of what the repo returned.
+	sort.Slice(haircuts, func(i, j int) bool {
+		return haircuts[i].CreatedAt.After(haircuts[j].CreatedAt)
+	})
+
+	HaircutsPage(
+		admin, barbers, haircuts,
+		barberName, serviceName,
+		fromStr, toStr, selectedBarberID,
+	).Render(r.Context(), w)
 }

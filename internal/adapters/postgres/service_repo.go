@@ -57,3 +57,8 @@ func (r *ServiceRepo) Create(ctx context.Context, name string, priceCentavos int
 	}
 	return s, nil
 }
+
+func (r *ServiceRepo) Delete(ctx context.Context, id int) error {
+	_, err := r.DB.Exec(ctx, `DELETE FROM services WHERE id = $1`, id)
+	return err
+}

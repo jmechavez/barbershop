@@ -197,4 +197,43 @@ func (r *HaircutRepo) ListByBarberRange(ctx context.Context, barberID int, from,
 	return out, nil
 }
 
+func (r *HaircutRepo) ListAllRange(ctx context.Context, from, to time.Time) ([]domain.Haircut, error) {
+	rows, err := r.DB.Query(ctx,
+		`SELECT id, barber_id, service_id, price_centavos,
+		        discount_centavos, net_centavos, discount_reason, created_at
+		 FROM haircuts
+		 WHERE created_at >= $1 AND created_at < $2
+		 ORDER BY created_at DESC`,
+		from, to,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []domain.Haircut
+	for rows.Next() {
+		var h domain.Haircut
+		if err := rows.Scan(
+			&h.ID, &h.BarberID, &h.ServiceID, &h.PriceCentavos,
+			&h.DiscountCentavos, &h.NetCentavos, &h.DiscountReason, &h.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, h)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	for i := range out {
+		payments, err := r.loadPayments(ctx, out[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		out[i].Payments = payments
+	}
+	return out, nil
+}
+
 var _ ports.HaircutRepository = (*HaircutRepo)(nil)

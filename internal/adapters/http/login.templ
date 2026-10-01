@@ -4,36 +4,40 @@ templ LoginPage(errorMsg string) {
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<title>Login — Barbershop</title>
-			<style>
-				body { font-family: sans-serif; max-width: 360px; margin: 80px auto; }
-				label { display: block; margin: 12px 0; }
-				input { width: 100%; padding: 8px; box-sizing: border-box; }
-				button { padding: 8px 16px; margin-top: 12px; }
-				.error { color: #b00020; margin: 12px 0; }
-				.back { margin-top: 24px; }
-			</style>
+			<title>Staff Login · DRFT Barbershop</title>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<link rel="stylesheet" href="/static/style.css"/>
 		</head>
 		<body>
-			<h1>Staff Login</h1>
+			<div class="auth-page">
+				<div class="auth-card">
+					<a href="/" class="auth-logo-link">
+						<img src="/static/logo.png" alt="DRFT Barbershop" class="auth-logo"/>
+					</a>
 
-			if errorMsg != "" {
-				<p class="error">{ errorMsg }</p>
-			}
+					<p class="auth-tagline">Staff Login</p>
 
-			<form method="post" action="/login">
-				<label>
-					Email
-					<input type="email" name="email" required autofocus/>
-				</label>
-				<label>
-					Password
-					<input type="password" name="password" required/>
-				</label>
-				<button type="submit">Log in</button>
-			</form>
+					if errorMsg != "" {
+						<p class="error auth-error">{ errorMsg }</p>
+					}
 
-			<p class="back"><a href="/">← Back to shop</a></p>
+					<form method="post" action="/login" class="auth-form">
+						<label class="auth-label">
+							<span>Email</span>
+							<input type="email" name="email" required autofocus autocomplete="username"/>
+						</label>
+
+						<label class="auth-label">
+							<span>Password</span>
+							<input type="password" name="password" required autocomplete="current-password"/>
+						</label>
+
+						<button type="submit" class="auth-submit">Log in</button>
+					</form>
+
+					<a href="/" class="auth-back">← Back to shop</a>
+				</div>
+			</div>
 		</body>
 	</html>
 }

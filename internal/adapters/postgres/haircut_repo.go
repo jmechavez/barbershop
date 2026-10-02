@@ -27,11 +27,12 @@ func (r *HaircutRepo) Create(ctx context.Context, h domain.Haircut) (domain.Hair
 
 	err = tx.QueryRow(ctx,
 		`INSERT INTO haircuts
-		 (barber_id, service_id, price_centavos, discount_centavos, net_centavos, discount_reason)
-		 VALUES ($1, $2, $3, $4, $5, $6)
-		 RETURNING id, created_at`,
+	 (barber_id, service_id, price_centavos, discount_centavos, net_centavos, discount_reason, created_at)
+	 VALUES ($1, $2, $3, $4, $5, $6, $7)
+	 RETURNING id, created_at`,
 		h.BarberID, h.ServiceID, h.PriceCentavos,
 		h.DiscountCentavos, h.NetCentavos, h.DiscountReason,
+		h.CreatedAt,
 	).Scan(&h.ID, &h.CreatedAt)
 	if err != nil {
 		return domain.Haircut{}, err

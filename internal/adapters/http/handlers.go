@@ -305,19 +305,23 @@ func (h *Handlers) CounterRecordHaircut(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	barberID, err := strconv.Atoi(r.FormValue("barber_id"))
+	// Barber
+	barberStr := r.FormValue("barber_id")
+	barberID, err := strconv.Atoi(barberStr)
 	if err != nil {
 		http.Error(w, "bad barber", http.StatusBadRequest)
 		return
 	}
 
-	serviceID, err := strconv.Atoi(r.FormValue("service_id"))
+	// Service
+	serviceStr := r.FormValue("service_id")
+	serviceID, err := strconv.Atoi(serviceStr)
 	if err != nil {
 		http.Error(w, "bad service", http.StatusBadRequest)
 		return
 	}
 
-	// Discount (optional, in pesos)
+	// Discount (pesos, optional)
 	discountPesos := 0
 	if s := r.FormValue("discount_pesos"); s != "" {
 		discountPesos, err = strconv.Atoi(s)
@@ -329,6 +333,19 @@ func (h *Handlers) CounterRecordHaircut(w http.ResponseWriter, r *http.Request) 
 	discountCentavos := discountPesos * 100
 	discountReason := r.FormValue("discount_reason")
 
+	// Created at (optional, defaults to now)
+	var createdAt time.Time
+	if s := r.FormValue("created_at"); s != "" {
+		parsed, err := time.ParseInLocation("2006-01-02T15:04", s, time.Local)
+		if err != nil {
+			h.renderCounter(w, r, "invalid date/time")
+			return
+		}
+		createdAt = parsed
+	} else {
+		createdAt = time.Now()
+	}
+
 	// Payments
 	payments, err := parsePayments(r)
 	if err != nil {
@@ -336,8 +353,8 @@ func (h *Handlers) CounterRecordHaircut(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Record.
-	if _, err := h.Haircuts.Record(r.Context(), barberID, serviceID, discountCentavos, discountReason, payments); err != nil {
+	// Record
+	if _, err := h.Haircuts.Record(r.Context(), barberID, serviceID, discountCentavos, discountReason, payments, createdAt); err != nil {
 		h.renderCounter(w, r, err.Error())
 		return
 	}

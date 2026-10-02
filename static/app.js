@@ -300,3 +300,70 @@
 	// Initial state
 	update();
 })();
+
+// 13. Counter — auto-fill the datetime field with "now".
+(function () {
+	const input = document.getElementById('created-at');
+	if (!input) return;
+
+	function pad(n) {
+		return String(n).padStart(2, '0');
+	}
+
+	function setNow() {
+		const d = new Date();
+		const s = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+		        + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+		input.value = s;
+	}
+
+	// Set on page load
+	setNow();
+
+	// If the barber needs to log another haircut after submitting,
+	// reset to "now" on form focus so the field isn't stuck at the previous value.
+	// (Optional — uncomment if you want it.)
+
+	// const form = document.getElementById('counter-form');
+	// form.addEventListener('submit', () => {
+	// 	setTimeout(setNow, 100);
+	// });
+})();
+
+// 14. Counter — quick discount buttons.
+(function () {
+	const discountInput = document.getElementById('discount-input');
+	const serviceSelect = document.getElementById('service-select');
+	const quickButtons = document.querySelectorAll('.quick-btn');
+	if (!discountInput || !serviceSelect || !quickButtons.length) return;
+
+	function servicePesos() {
+		const opt = serviceSelect.options[serviceSelect.selectedIndex];
+		if (!opt) return 0;
+		const cents = parseInt(opt.getAttribute('data-price') || '0', 10);
+		return isNaN(cents) ? 0 : Math.floor(cents / 100);
+	}
+
+	quickButtons.forEach((btn) => {
+		btn.addEventListener('click', () => {
+			const action = btn.getAttribute('data-discount');
+
+			if (action === 'clear') {
+				discountInput.value = '0';
+			} else if (action === 'free') {
+				discountInput.value = String(servicePesos());
+			} else {
+				// numeric discount (e.g. "50")
+				const n = parseInt(action, 10);
+				discountInput.value = String(isNaN(n) ? 0 : n);
+			}
+
+			// Trigger the input event so the live totals update.
+			discountInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+			// Focus the field so the barber can adjust if needed.
+			discountInput.focus();
+			discountInput.select();
+		});
+	});
+})();

@@ -86,17 +86,29 @@ templ CounterPage(
 											}
 										</select>
 									</label>
+
+									<label class="inline-label">
+										<span>Date &amp; time</span>
+										<input type="datetime-local" name="created_at" id="created-at" required/>
+									</label>
 								</div>
 
-								<div class="form-row">
+								<div class="form-row form-row-discount">
 									<label class="inline-label">
 										<span>Discount (₱)</span>
 										<input type="number" name="discount_pesos" id="discount-input" min="0" step="1" value="0"/>
 									</label>
 
-									<label class="inline-label inline-label-grow">
+									<div class="quick-discount">
+										<span class="quick-discount-label">Quick</span>
+										<button type="button" class="quick-btn" data-discount="50">₱50</button>
+										<button type="button" class="quick-btn quick-btn-free" data-discount="free">Free</button>
+										<button type="button" class="quick-btn quick-btn-clear" data-discount="clear">Clear</button>
+									</div>
+
+									<label class="inline-label inline-label-grow inline-label-reason">
 										<span>Discount reason</span>
-										<input type="text" name="discount_reason" placeholder="Student, Senior, VIP..."/>
+										<textarea name="discount_reason" rows="3" placeholder="Student, Senior, VIP, Birthday..."></textarea>
 									</label>
 								</div>
 
@@ -162,59 +174,61 @@ templ CounterPage(
 							</p>
 						</div>
 
-						if len(haircuts) == 0 {
-							<div class="empty-state">
-								<p>No haircuts recorded yet today.</p>
-							</div>
-						} else {
-							<table class="data-table">
-								<thead>
-									<tr>
-										<th style="width: 90px;">Time</th>
-										<th>Barber</th>
-										<th>Service</th>
-										<th style="width: 110px;">Price</th>
-										<th style="width: 140px;">Discount</th>
-										<th style="width: 100px;">Net</th>
-										<th>Payments</th>
-									</tr>
-								</thead>
-								<tbody>
-									for _, h := range haircuts {
+						<div class="panel-body panel-body-flush">
+							if len(haircuts) == 0 {
+								<div class="empty-state">
+									<p>No haircuts recorded yet today.</p>
+								</div>
+							} else {
+								<table class="data-table">
+									<thead>
 										<tr>
-											<td class="data-mono" data-label="Time">{ h.CreatedAt.Format("15:04") }</td>
-											<td data-label="Barber">{ barberName[h.BarberID] }</td>
-											<td data-label="Service">{ serviceName[h.ServiceID] }</td>
-											<td data-label="Price">{ domain.FormatCentavos(h.PriceCentavos) }</td>
-											<td data-label="Discount">
-												if h.DiscountCentavos > 0 {
-													<span class="data-strong">{ domain.FormatCentavos(h.DiscountCentavos) }</span>
-													if h.DiscountReason != "" {
-														<br/><small>({ h.DiscountReason })</small>
-													}
-												} else {
-													<span class="data-dim">—</span>
-												}
-											</td>
-											<td class="data-strong" data-label="Net">{ domain.FormatCentavos(h.NetCentavos) }</td>
-											<td data-label="Payments">
-												if len(h.Payments) == 0 {
-													<small>free</small>
-												} else {
-													for i, p := range h.Payments {
-														if i > 0 {
-															<br/>
-														}
-														<span class="pay-tag">{ string(p.Method) }</span>
-														{ domain.FormatCentavos(p.AmountCentavos) }
-													}
-												}
-											</td>
+											<th style="width: 90px;">Time</th>
+											<th>Barber</th>
+											<th>Service</th>
+											<th style="width: 110px;">Price</th>
+											<th style="width: 140px;">Discount</th>
+											<th style="width: 100px;">Net</th>
+											<th>Payments</th>
 										</tr>
-									}
-								</tbody>
-							</table>
-						}
+									</thead>
+									<tbody>
+										for _, h := range haircuts {
+											<tr>
+												<td class="data-mono" data-label="Time">{ h.CreatedAt.Format("15:04") }</td>
+												<td data-label="Barber">{ barberName[h.BarberID] }</td>
+												<td data-label="Service">{ serviceName[h.ServiceID] }</td>
+												<td data-label="Price">{ domain.FormatCentavos(h.PriceCentavos) }</td>
+												<td data-label="Discount">
+													if h.DiscountCentavos > 0 {
+														<span class="data-strong">{ domain.FormatCentavos(h.DiscountCentavos) }</span>
+														if h.DiscountReason != "" {
+															<br/><small>({ h.DiscountReason })</small>
+														}
+													} else {
+														<span class="data-dim">—</span>
+													}
+												</td>
+												<td class="data-strong" data-label="Net">{ domain.FormatCentavos(h.NetCentavos) }</td>
+												<td data-label="Payments">
+													if len(h.Payments) == 0 {
+														<small>free</small>
+													} else {
+														for i, p := range h.Payments {
+															if i > 0 {
+																<br/>
+															}
+															<span class="pay-tag">{ string(p.Method) }</span>
+															{ domain.FormatCentavos(p.AmountCentavos) }
+														}
+													}
+												</td>
+											</tr>
+										}
+									</tbody>
+								</table>
+							}
+						</div>
 					</section>
 
 				</main>

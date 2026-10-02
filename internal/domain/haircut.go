@@ -31,13 +31,21 @@ type Haircut struct {
 	CreatedAt        time.Time
 }
 
-// NewHaircut builds a haircut with price, discount, and net set consistently.
-func NewHaircut(barberID, serviceID, priceCentavos, discountCentavos int, reason string, payments []Payment) Haircut {
+// NewHaircutAt builds a haircut with an explicit created_at time.
+func NewHaircutAt(
+	barberID, serviceID, priceCentavos, discountCentavos int,
+	reason string,
+	payments []Payment,
+	createdAt time.Time,
+) Haircut {
 	if discountCentavos < 0 {
 		discountCentavos = 0
 	}
 	if discountCentavos > priceCentavos {
 		discountCentavos = priceCentavos
+	}
+	if createdAt.IsZero() {
+		createdAt = time.Now()
 	}
 	return Haircut{
 		BarberID:         barberID,
@@ -47,6 +55,7 @@ func NewHaircut(barberID, serviceID, priceCentavos, discountCentavos int, reason
 		NetCentavos:      priceCentavos - discountCentavos,
 		DiscountReason:   reason,
 		Payments:         payments,
+		CreatedAt:        createdAt,
 	}
 }
 

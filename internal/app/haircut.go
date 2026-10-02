@@ -40,6 +40,7 @@ func (s *HaircutService) Record(
 	discountCentavos int,
 	discountReason string,
 	payments []domain.Payment,
+	createdAt time.Time,
 ) (domain.Haircut, error) {
 
 	// Fetch the service.
@@ -61,7 +62,7 @@ func (s *HaircutService) Record(
 	}
 
 	// Build the haircut with computed net.
-	h := domain.NewHaircut(barberID, serviceID, svc.PriceCentavos, discountCentavos, discountReason, payments)
+	h := domain.NewHaircutAt(barberID, serviceID, svc.PriceCentavos, discountCentavos, discountReason, payments, createdAt)
 
 	// Validate payments.
 	for _, p := range payments {

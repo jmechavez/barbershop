@@ -124,3 +124,14 @@ func TestAuthenticate_WrongPassword(t *testing.T) {
 		t.Errorf("err = %v, want ErrInvalidPassword", err)
 	}
 }
+
+func (f *fakeUsers) UpdatePassword(ctx context.Context, userID int, passwordHash string) error {
+	for email, u := range f.byEmail {
+		if u.ID == userID {
+			u.PasswordHash = passwordHash
+			f.byEmail[email] = u
+			return nil
+		}
+	}
+	return ports.ErrUserNotFound
+}

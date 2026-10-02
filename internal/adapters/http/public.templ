@@ -10,14 +10,30 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<title>DRFT Barbershop</title>
+			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>DRFT Barbershop — General Santos City</title>
+			<meta name="description" content="Clean fades, sharp lines, solid cuts. Walk-ins welcome, open daily 10AM–9PM. Purok Carmenville Rd, Calumpang, General Santos City."/>
+			<meta name="theme-color" content="#000000"/>
+			<!-- Favicon -->
+			<link rel="icon" type="image/png" href="/static/favicon.png"/>
+			<link rel="apple-touch-icon" href="/static/favicon.png"/>
+			<!-- Open Graph (Facebook, Messenger, Viber, WhatsApp) -->
+			<meta property="og:type" content="website"/>
+			<meta property="og:title" content="DRFT Barbershop — General Santos City"/>
+			<meta property="og:description" content="Clean fades, sharp lines, solid cuts. Walk-ins welcome, open daily."/>
+			<meta property="og:image" content="https://drftbarbershop.com/static/hero.png"/>
+			<meta property="og:url" content="https://drftbarbershop.com/"/>
+			<!-- Twitter / X -->
+			<meta name="twitter:card" content="summary_large_image"/>
+			<meta name="twitter:title" content="DRFT Barbershop — General Santos City"/>
+			<meta name="twitter:description" content="Clean fades, sharp lines, solid cuts. Walk-ins welcome, open daily."/>
+			<meta name="twitter:image" content="https://drftbarbershop.com/static/hero.png"/>
 			<link rel="stylesheet" href="/static/style.css"/>
 			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
 			<script src="/static/app.js" defer></script>
 		</head>
-		<body>
-
+		<body class="fade-in">
 			<!-- Nav -->
 			<nav class="nav-band" id="topnav">
 				<div class="nav-inner">
@@ -46,7 +62,6 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 					</div>
 				</div>
 			</nav>
-
 			<!-- Hero -->
 			<section class="hero-band hero-band-photo">
 				<div class="hero-overlay"></div>
@@ -56,7 +71,6 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 					<a href="#menu" class="btn-hero">View menu ↓</a>
 				</div>
 			</section>
-
 			<!-- Text panel 1 -->
 			<section class="text-band" id="about">
 				<div class="text-band-inner">
@@ -67,10 +81,8 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 					</p>
 				</div>
 			</section>
-
 			<!-- Wide visual band (photo slot for later) -->
 			<section class="wide-band wide-band-photo" aria-hidden="true"></section>
-
 			<!-- Text panel 2 -->
 			<section class="text-band">
 				<div class="text-band-inner">
@@ -81,12 +93,10 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 					</p>
 				</div>
 			</section>
-
 			<!-- Testimonials -->
 			<section class="testimonials-band" id="reviews">
 				<div class="testimonials-inner">
 					<h2>What customers say</h2>
-
 					<div class="testimonial-grid">
 						<div class="testimonial">
 							<p class="testimonial-quote">
@@ -94,14 +104,12 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 							</p>
 							<p class="testimonial-name">— Samuel D.</p>
 						</div>
-
 						<div class="testimonial">
 							<p class="testimonial-quote">
 								Limpyo kaayo mo-gupit, astig ang resulta. Balik-balik gyud ko diri! 🔥
 							</p>
 							<p class="testimonial-name">— Reneboy Q.</p>
 						</div>
-
 						<div class="testimonial">
 							<p class="testimonial-quote">
 								Sulit kaayo! Limpyo ang gupit, tarong ang barber, ug fresh gyud pag-gawas. 🔥
@@ -111,7 +119,6 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 					</div>
 				</div>
 			</section>
-
 			<!-- Menu -->
 			<section class="menu-band" id="menu">
 				<div class="menu-inner">
@@ -130,7 +137,6 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 								}
 							}
 						</div>
-
 						<h2>Signature Packages</h2>
 						<div class="svc-list">
 							for _, s := range services {
@@ -145,7 +151,6 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 								}
 							}
 						</div>
-
 						<div class="total-bar">
 							<div>
 								<div class="label">Total</div>
@@ -156,7 +161,6 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 					</form>
 				</div>
 			</section>
-
 			<!-- Closing line -->
 			<section class="closing-band">
 				<p>
@@ -165,7 +169,6 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 					to book a slot.
 				</p>
 			</section>
-
 			<!-- Footer -->
 			<footer class="site-footer">
 				<div class="footer-inner">
@@ -192,29 +195,27 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 							</a>
 						</div>
 					</div>
-
 					<div class="footer-cols">
 						<div class="footer-col">
 							<h4 class="footer-heading">Visit</h4>
 							<p>Purok Carmenville Rd<br/>General Santos City</p>
 						</div>
-
 						<div class="footer-col">
 							<h4 class="footer-heading">Contact</h4>
 							<p>
-								<a href="tel:+639952765856">0995 276 5856</a><br/>
+								<a href="tel:+639952765856">0995 276 5856</a>
+								<br/>
 								<a href="mailto:info@drftbarbershop.com">info@drftbarbershop.com</a>
 							</p>
 						</div>
-
 						<div class="footer-col">
 							<h4 class="footer-heading">Hours</h4>
 							<p>
-								Open daily<br/>
+								Open daily
+								<br/>
 								10:00 AM – 9:00 PM
 							</p>
 						</div>
-
 						<div class="footer-col">
 							<h4 class="footer-heading">Sister Shop</h4>
 							<p>
@@ -226,14 +227,12 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 							</p>
 						</div>
 					</div>
-
 					<div class="footer-bottom">
 						<p>© 2026 DRFT Barbershop. All rights reserved.</p>
 						<p><a href="/login">Staff login</a></p>
 					</div>
 				</div>
 			</footer>
-
 		</body>
 	</html>
 }

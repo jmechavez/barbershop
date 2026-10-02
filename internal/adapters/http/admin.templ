@@ -10,10 +10,14 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<title>Admin · DRFT Barbershop</title>
+			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>Admin · DRFT Barbershop</title>
+			<meta name="theme-color" content="#000000"/>
+			<link rel="icon" type="image/png" href="/static/favicon.png"/>
 			<link rel="stylesheet" href="/static/style.css"/>
 			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
+			<script src="/static/app.js" defer></script>
 		</head>
 		<body class="app-page">
 			<div class="app-shell">
@@ -24,6 +28,7 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 						<a href="/admin" class="active">Admin</a>
 						<a href="/counter">Counter</a>
 						<a href="/admin/haircuts">Haircuts</a>
+						<a href="/admin/cash-advances">Advances</a>
 					</div>
 					<div class="app-nav-user">
 						<span>{ user.FullName }</span>
@@ -48,48 +53,71 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 						</div>
 
 						<div class="panel-body panel-body-flush">
-							<table class="data-table">
-								<thead>
-									<tr>
-										<th style="width: 60px;">ID</th>
-										<th>Name</th>
-										<th>Email</th>
-										<th style="width: 100px;">Role</th>
-										<th style="width: 130px;">Daily min.</th>
-										<th style="width: 280px;">Reset password</th>
-									</tr>
-								</thead>
-								<tbody>
-									for _, u := range users {
+
+							<div class="skeleton-only">
+								<table class="data-table">
+									<tbody>
+										<tr class="skeleton-row"><td><span class="skeleton-bar w-30"></span></td><td><span class="skeleton-bar w-50"></span></td><td><span class="skeleton-bar w-70"></span></td></tr>
+										<tr class="skeleton-row"><td><span class="skeleton-bar w-30"></span></td><td><span class="skeleton-bar w-70"></span></td><td><span class="skeleton-bar w-50"></span></td></tr>
+									</tbody>
+								</table>
+							</div>
+
+							<div class="real-content">
+								<table class="data-table">
+									<thead>
 										<tr>
-											<td class="data-mono">{ fmt.Sprintf("%d", u.ID) }</td>
-											<td>{ u.FullName }</td>
-											<td class="data-dim">{ u.Email }</td>
-											<td>
-												if u.Role == domain.RoleAdmin {
-													<span class="role-badge role-admin">admin</span>
-												} else {
-													<span class="role-badge role-barber">barber</span>
-												}
-											</td>
-											<td>{ domain.FormatCentavos(u.DailyFloorCentavos) }</td>
-											<td>
-												<form method="post"
-												      action={ fmt.Sprintf("/admin/users/%d/password", u.ID) }
-												      class="row-form">
-													<input type="password" name="new_password" placeholder="New password"
-													       required minlength="6"
-													       class="row-input"/>
-													<button type="submit" class="btn-secondary"
-													        onclick="return confirm('Reset password for this user?');">
-														Reset
-													</button>
-												</form>
-											</td>
+											<th style="width: 60px;">ID</th>
+											<th>Name</th>
+											<th>Email</th>
+											<th style="width: 100px;">Role</th>
+											<th style="width: 130px;">Daily min.</th>
+											<th style="width: 280px;">Reset password</th>
 										</tr>
-									}
-								</tbody>
-							</table>
+									</thead>
+									<tbody>
+										for _, u := range users {
+											<tr>
+												<td class="data-mono" data-label="ID">{ fmt.Sprintf("%d", u.ID) }</td>
+												<td data-label="Name">{ u.FullName }</td>
+												<td class="data-dim" data-label="Email">{ u.Email }</td>
+												<td data-label="Role">
+													if u.Role == domain.RoleAdmin {
+														<span class="role-badge role-admin">admin</span>
+													} else {
+														<span class="role-badge role-barber">barber</span>
+													}
+												</td>
+												<td class="num" data-label="Daily min">
+													if u.Role == domain.RoleAdmin {
+														<span class="data-dim">—</span>
+													} else {
+														{ domain.FormatCentavos(u.DailyFloorCentavos) }
+													}
+												</td>
+												<td data-label="Reset password">
+													<form method="post"
+													      action={ fmt.Sprintf("/admin/users/%d/password", u.ID) }
+													      class="row-form">
+														<input type="password" name="new_password" placeholder="New password"
+														       required minlength="6"
+														       class="row-input"/>
+														<button type="submit"
+														        class="btn-icon js-confirm"
+														        data-confirm={ "Reset password for " + u.FullName + "?" }
+														        aria-label="Reset password" title="Reset password">
+															<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+																<path d="M3 12a9 9 0 1 0 3-6.7"/>
+																<polyline points="3 4 3 10 9 10"/>
+															</svg>
+														</button>
+													</form>
+												</td>
+											</tr>
+										}
+									</tbody>
+								</table>
+							</div>
 						</div>
 
 						<div class="panel-foot">
@@ -117,7 +145,11 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 									<span>Daily min (₱)</span>
 									<input type="number" name="daily_floor_pesos" min="0" value="500" required/>
 								</label>
-								<button type="submit">Add staff</button>
+								<button type="submit"
+								        class="js-confirm"
+								        data-confirm="Create this staff account?">
+									Add staff
+								</button>
 							</form>
 						</div>
 					</section>
@@ -130,34 +162,46 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 						</div>
 
 						<div class="panel-body panel-body-flush">
-							if len(advances) == 0 {
-								<div class="empty-state">
-									<p>No cash advances yet.</p>
-								</div>
-							} else {
+
+							<div class="skeleton-only">
 								<table class="data-table">
-									<thead>
-										<tr>
-											<th style="width: 60px;">ID</th>
-											<th>Barber</th>
-											<th style="width: 110px;">Amount</th>
-											<th style="width: 150px;">Date</th>
-											<th>Note</th>
-										</tr>
-									</thead>
 									<tbody>
-										for _, a := range advances {
-											<tr>
-												<td class="data-mono">{ fmt.Sprintf("%d", a.ID) }</td>
-												<td>{ barberName[a.BarberID] }</td>
-												<td class="data-strong">{ domain.FormatCentavos(a.AmountCentavos) }</td>
-												<td class="data-dim">{ a.TakenAt.Format("Jan 2, 2006") }</td>
-												<td>{ a.Note }</td>
-											</tr>
-										}
+										<tr class="skeleton-row"><td><span class="skeleton-bar w-30"></span></td><td><span class="skeleton-bar w-50"></span></td><td><span class="skeleton-bar w-50"></span></td></tr>
+										<tr class="skeleton-row"><td><span class="skeleton-bar w-30"></span></td><td><span class="skeleton-bar w-70"></span></td><td><span class="skeleton-bar w-50"></span></td></tr>
 									</tbody>
 								</table>
-							}
+							</div>
+
+							<div class="real-content">
+								if len(advances) == 0 {
+									<div class="empty-state">
+										<p>No cash advances yet.</p>
+									</div>
+								} else {
+									<table class="data-table">
+										<thead>
+											<tr>
+												<th style="width: 60px;">ID</th>
+												<th>Barber</th>
+												<th style="width: 120px;">Amount</th>
+												<th style="width: 160px;">Date</th>
+												<th>Note</th>
+											</tr>
+										</thead>
+										<tbody>
+											for _, a := range advances {
+												<tr>
+													<td class="data-mono" data-label="ID">{ fmt.Sprintf("%d", a.ID) }</td>
+													<td data-label="Barber">{ barberName[a.BarberID] }</td>
+													<td class="num data-strong" data-label="Amount">{ domain.FormatCentavos(a.AmountCentavos) }</td>
+													<td class="data-dim" data-label="Date">{ a.TakenAt.Format("Jan 2, 2006") }</td>
+													<td data-label="Note">{ a.Note }</td>
+												</tr>
+											}
+										</tbody>
+									</table>
+								}
+							</div>
 						</div>
 
 						<div class="panel-foot">
@@ -180,7 +224,11 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 									<span>Note</span>
 									<input type="text" name="note" placeholder="Reason (optional)"/>
 								</label>
-								<button type="submit">Record advance</button>
+								<button type="submit"
+								        class="js-confirm"
+								        data-confirm="Record this cash advance?">
+									Record advance
+								</button>
 							</form>
 						</div>
 					</section>
@@ -193,22 +241,35 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 						</div>
 
 						<div class="panel-body panel-body-flush">
-							<table class="data-table">
-								<thead>
-									<tr>
-										<th style="width: 60px;">ID</th>
-										<th>Name</th>
-										<th style="width: 130px;">Price (₱)</th>
-										<th style="width: 130px;">Formatted</th>
-										<th style="width: 180px;"></th>
-									</tr>
-								</thead>
-								<tbody>
-									for _, s := range services {
-										@ServiceRow(s)
-									}
-								</tbody>
-							</table>
+
+							<div class="skeleton-only">
+								<table class="data-table">
+									<tbody>
+										<tr class="skeleton-row"><td><span class="skeleton-bar w-30"></span></td><td><span class="skeleton-bar w-70"></span></td><td><span class="skeleton-bar w-50"></span></td></tr>
+										<tr class="skeleton-row"><td><span class="skeleton-bar w-30"></span></td><td><span class="skeleton-bar w-50"></span></td><td><span class="skeleton-bar w-50"></span></td></tr>
+										<tr class="skeleton-row"><td><span class="skeleton-bar w-30"></span></td><td><span class="skeleton-bar w-70"></span></td><td><span class="skeleton-bar w-50"></span></td></tr>
+									</tbody>
+								</table>
+							</div>
+
+							<div class="real-content">
+								<table class="data-table">
+									<thead>
+										<tr>
+											<th style="width: 60px;">ID</th>
+											<th>Name</th>
+											<th style="width: 130px;">Price (₱)</th>
+											<th style="width: 130px;">Formatted</th>
+											<th style="width: 140px;"></th>
+										</tr>
+									</thead>
+									<tbody>
+										for _, s := range services {
+											@ServiceRow(s)
+										}
+									</tbody>
+								</table>
+							</div>
 						</div>
 
 						<div class="panel-foot">
@@ -221,12 +282,27 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 									<span>Price (₱)</span>
 									<input type="number" name="price_pesos" min="0" step="1" required/>
 								</label>
-								<button type="submit">Add service</button>
+								<button type="submit"
+								        class="js-confirm"
+								        data-confirm="Add this service?">
+									Add service
+								</button>
 							</form>
 						</div>
 					</section>
 
 				</main>
+			</div>
+
+			<!-- Confirm modal -->
+			<div class="confirm-overlay" id="confirmModal" aria-hidden="true">
+				<div class="confirm-box">
+					<p class="confirm-message" id="confirmMessage">Are you sure?</p>
+					<div class="confirm-actions">
+						<button type="button" class="btn-secondary" id="confirmCancel">Cancel</button>
+						<button type="button" class="btn-danger" id="confirmOk">Confirm</button>
+					</div>
+				</div>
 			</div>
 		</body>
 	</html>
@@ -234,8 +310,8 @@ templ AdminHome(user domain.User, services []domain.Service, users []domain.User
 
 templ ServiceRow(s domain.Service) {
 	<tr id={ fmt.Sprintf("service-%d", s.ID) }>
-		<td class="data-mono">{ fmt.Sprintf("%d", s.ID) }</td>
-		<td>
+		<td class="data-mono" data-label="ID">{ fmt.Sprintf("%d", s.ID) }</td>
+		<td data-label="Name">
 			<input type="text"
 			       name="name"
 			       form={ fmt.Sprintf("form-%d", s.ID) }
@@ -243,7 +319,7 @@ templ ServiceRow(s domain.Service) {
 			       required
 			       class="row-input"/>
 		</td>
-		<td>
+		<td data-label="Price (₱)">
 			<input type="number"
 			       name="price_pesos"
 			       form={ fmt.Sprintf("form-%d", s.ID) }
@@ -253,22 +329,32 @@ templ ServiceRow(s domain.Service) {
 			       required
 			       class="row-input"/>
 		</td>
-		<td class="data-strong">{ s.FormatPrice() }</td>
-		<td>
+		<td class="data-strong" data-label="Formatted">{ s.FormatPrice() }</td>
+		<td data-label="Actions">
 			<div class="row-actions">
 				<form id={ fmt.Sprintf("form-%d", s.ID) }
 				      hx-post={ fmt.Sprintf("/admin/services/%d", s.ID) }
 				      hx-target={ fmt.Sprintf("#service-%d", s.ID) }
 				      hx-swap="outerHTML"
 				      style="display: contents;">
-					<button type="submit" class="btn-secondary">Save</button>
+					<button type="submit" class="btn-icon" aria-label="Save" title="Save">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<path d="M20 6L9 17l-5-5"/>
+						</svg>
+					</button>
 				</form>
 				<button hx-delete={ fmt.Sprintf("/admin/services/%d", s.ID) }
 				        hx-target={ fmt.Sprintf("#service-%d", s.ID) }
 				        hx-swap="outerHTML"
-				        hx-confirm="Delete this service? This cannot be undone."
-				        class="btn-danger">
-					Delete
+				        class="btn-icon btn-icon-danger js-confirm"
+				        data-confirm={ "Delete " + s.Name + "? This cannot be undone." }
+				        aria-label="Delete" title="Delete">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<polyline points="3 6 5 6 21 6"/>
+						<path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
+						<path d="M10 11v6M14 11v6"/>
+						<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+					</svg>
 				</button>
 			</div>
 		</td>

@@ -10,13 +10,15 @@ templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]st
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<title>My Page · DRFT Barbershop</title>
+			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>Something · DRFT Barbershop</title>
+			<meta name="theme-color" content="#000000"/>
+			<link rel="icon" type="image/png" href="/static/favicon.png"/>
 			<link rel="stylesheet" href="/static/style.css"/>
 		</head>
 		<body class="app-page">
 			<div class="app-shell">
-
 				<nav class="app-nav">
 					<a href="/" class="app-nav-brand">DRFT</a>
 					<div class="app-nav-tabs">
@@ -30,14 +32,11 @@ templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]st
 						</form>
 					</div>
 				</nav>
-
 				<main class="app-main">
-
 					<header class="app-header">
 						<h1 class="app-title">Hello, { user.FullName }</h1>
 						<p class="app-sub">Today at a glance</p>
 					</header>
-
 					<!-- Stats -->
 					<section class="stats-row">
 						<div class="stat-card">
@@ -57,7 +56,6 @@ templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]st
 							<div class="stat-value">{ domain.FormatCentavos(domain.SumAdvances(advances)) }</div>
 						</div>
 					</section>
-
 					<!-- Today's haircuts -->
 					<section class="panel">
 						<div class="panel-head">
@@ -66,7 +64,6 @@ templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]st
 								{ fmt.Sprintf("%d", len(haircuts)) } haircuts · net { domain.FormatCentavos(domain.SumNetCentavos(haircuts)) }
 							</p>
 						</div>
-
 						if len(haircuts) == 0 {
 							<div class="empty-state">
 								<p>No haircuts recorded yet today.</p>
@@ -93,7 +90,8 @@ templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]st
 												if h.DiscountCentavos > 0 {
 													<span class="data-strong">{ domain.FormatCentavos(h.DiscountCentavos) }</span>
 													if h.DiscountReason != "" {
-														<br/><small>({ h.DiscountReason })</small>
+														<br/>
+														<small>({ h.DiscountReason })</small>
 													}
 												} else {
 													<span class="data-dim">—</span>
@@ -119,14 +117,12 @@ templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]st
 							</table>
 						}
 					</section>
-
 					<!-- Cash advances -->
 					<section class="panel">
 						<div class="panel-head">
 							<h2 class="panel-title">Cash advances</h2>
 							<p class="panel-sub">Last 30 days · total { domain.FormatCentavos(domain.SumAdvances(advances)) }</p>
 						</div>
-
 						if len(advances) == 0 {
 							<div class="empty-state">
 								<p>No cash advances in the last 30 days.</p>
@@ -152,7 +148,6 @@ templ MePage(user domain.User, haircuts []domain.Haircut, serviceName map[int]st
 							</table>
 						}
 					</section>
-
 				</main>
 			</div>
 		</body>

@@ -98,7 +98,6 @@
 
 	const KEY = 'drft_picked';
 
-	// On load: restore any previously checked boxes.
 	try {
 		const saved = JSON.parse(sessionStorage.getItem(KEY) || '[]');
 		form.querySelectorAll('input[name="service"]').forEach((input) => {
@@ -110,7 +109,6 @@
 		});
 	} catch (e) { /* ignore */ }
 
-	// On change: save the current checked set.
 	form.addEventListener('change', () => {
 		const picked = Array.from(
 			form.querySelectorAll('input[name="service"]:checked')
@@ -131,4 +129,91 @@
 		setTimeout(() => { amount.style.transform = ''; }, 180);
 	});
 	mo.observe(amount, { childList: true, characterData: true, subtree: true });
+})();
+
+// 9. Mark body as loaded after page finishes (for skeleton loading).
+(function () {
+	function markLoaded() {
+		if (document.body) document.body.classList.add('loaded');
+	}
+	if (document.readyState === 'complete') {
+		markLoaded();
+	} else {
+		window.addEventListener('load', markLoaded);
+	}
+})();
+
+// 10. Custom confirm modal.
+(function () {
+	const modal = document.getElementById('confirmModal');
+	if (!modal) return;
+
+	const messageEl = document.getElementById('confirmMessage');
+	const cancelBtn = document.getElementById('confirmCancel');
+	const okBtn = document.getElementById('confirmOk');
+
+	let pendingCallback = null;
+
+	function openConfirm(message, callback) {
+		messageEl.textContent = message;
+		pendingCallback = callback;
+		modal.classList.add('open');
+		modal.setAttribute('aria-hidden', 'false');
+		okBtn.focus();
+	}
+
+	function closeConfirm() {
+		modal.classList.remove('open');
+		modal.setAttribute('aria-hidden', 'true');
+		pendingCallback = null;
+	}
+
+	cancelBtn.addEventListener('click', closeConfirm);
+
+	okBtn.addEventListener('click', () => {
+		const cb = pendingCallback;
+		closeConfirm();
+		if (cb) cb();
+	});
+
+	// Close on backdrop click
+	modal.addEventListener('click', (e) => {
+		if (e.target === modal) closeConfirm();
+	});
+
+	// Close on Escape key
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape' && modal.classList.contains('open')) {
+			closeConfirm();
+		}
+	});
+
+	// Expose a global so other scripts can trigger
+	window.drftConfirm = openConfirm;
+})();
+
+// 11. Intercept clicks on .js-confirm elements.
+(function () {
+	document.addEventListener('click', (e) => {
+		const target = e.target.closest('.js-confirm');
+		if (!target) return;
+		if (!window.drftConfirm) return;
+
+		// Only intercept if it's a submit button or a link we want to confirm.
+		e.preventDefault();
+		e.stopPropagation();
+
+		const message = target.getAttribute('data-confirm') || 'Are you sure?';
+
+		window.drftConfirm(message, () => {
+			// Remove the class and re-trigger the click so the original action runs.
+			target.classList.remove('js-confirm');
+			target.click();
+
+			// Restore the class so future clicks still get confirmed.
+			setTimeout(() => {
+				target.classList.add('js-confirm');
+			}, 100);
+		});
+	}, true);
 })();

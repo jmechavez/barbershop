@@ -10,13 +10,15 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<title>Salary · DRFT Barbershop</title>
+			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>Something · DRFT Barbershop</title>
+			<meta name="theme-color" content="#000000"/>
+			<link rel="icon" type="image/png" href="/static/favicon.png"/>
 			<link rel="stylesheet" href="/static/style.css"/>
 		</head>
 		<body class="app-page">
 			<div class="app-shell">
-
 				<nav class="app-nav">
 					<a href="/" class="app-nav-brand">DRFT</a>
 					<div class="app-nav-tabs">
@@ -30,16 +32,13 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 						</form>
 					</div>
 				</nav>
-
 				<main class="app-main">
-
 					<header class="app-header">
 						<h1 class="app-title">Salary</h1>
 						<p class="app-sub">
 							From <strong>{ summary.From.Format("Jan 2") }</strong> to <strong>{ summary.To.Format("Jan 2, 2006") }</strong>
 						</p>
 					</header>
-
 					<!-- Filter -->
 					<section class="panel">
 						<div class="panel-head">
@@ -59,7 +58,6 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 							</form>
 						</div>
 					</section>
-
 					<!-- Summary stats -->
 					<section class="stats-row">
 						<div class="stat-card">
@@ -79,7 +77,6 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 							<div class="stat-value">{ domain.FormatCentavos(summary.TakeHome) }</div>
 						</div>
 					</section>
-
 					<!-- Daily breakdown -->
 					<section class="panel">
 						<div class="panel-head">
@@ -88,7 +85,6 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 								Daily minimum { domain.FormatCentavos(summary.DailyFloor) } · commission { fmt.Sprintf("%d%%", domain.CommissionPercent) }
 							</p>
 						</div>
-
 						if len(summary.Days) == 0 {
 							<div class="empty-state">
 								<p>No working days in this range.</p>
@@ -114,7 +110,8 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 											<td>
 												<span class="data-strong">{ domain.FormatCentavos(d.Paid) }</span>
 												if d.FloorApplied {
-													<br/><small class="floor-tag">minimum applied</small>
+													<br/>
+													<small class="floor-tag">minimum applied</small>
 												}
 											</td>
 										</tr>
@@ -123,7 +120,6 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 							</table>
 						}
 					</section>
-
 					<!-- Totals box -->
 					if len(summary.Days) > 0 {
 						<div class="totals-box">
@@ -141,7 +137,6 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 							</div>
 						</div>
 					}
-
 				</main>
 			</div>
 		</body>

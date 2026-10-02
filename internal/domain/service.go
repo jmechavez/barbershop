@@ -21,7 +21,7 @@ func TotalCentavos(items []Service) int {
 // FormatPrice returns the price with an optional "+" when the price
 // is a starting point rather than an exact amount.
 func (s Service) FormatPrice() string {
-	out := FormatCentavos(s.PriceCentavos)
+	out := FormatCentavosShort(s.PriceCentavos)
 	if s.IsStartingPrice {
 		out += "+"
 	}

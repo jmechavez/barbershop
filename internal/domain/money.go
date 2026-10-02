@@ -33,3 +33,12 @@ func withThousands(n int) string {
 	}
 	return string(out)
 }
+
+// FormatCentavosShort renders the amount without ".00" when the
+// centavo part is zero. Example: 12000 -> "₱120", 12550 -> "₱125.50"
+func FormatCentavosShort(centavos int) string {
+	if centavos%100 == 0 {
+		return fmt.Sprintf("₱%s", withThousands(centavos/100))
+	}
+	return FormatCentavos(centavos)
+}

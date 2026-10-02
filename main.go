@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 
 	bcryptadapter "barbershop/internal/adapters/bcrypt"
 	httpadapter "barbershop/internal/adapters/http"
@@ -47,6 +48,10 @@ func main() {
 	}
 	router := httpadapter.NewRouter(handlers)
 
-	log.Println("listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Println("listening on :" + port)
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }

@@ -24,6 +24,7 @@ templ HaircutsPage(
 			<meta name="theme-color" content="#000000"/>
 			<link rel="icon" type="image/png" href="/static/favicon.png"/>
 			<link rel="stylesheet" href="/static/style.css"/>
+			<script src="/static/app.js" defer></script>
 		</head>
 		<body class="app-page">
 			<div class="app-shell">
@@ -103,59 +104,65 @@ templ HaircutsPage(
 							</p>
 						</div>
 
-						if len(haircuts) == 0 {
-							<div class="empty-state">
-								<p>No haircuts in this range.</p>
-							</div>
-						} else {
-							<table class="data-table">
-								<thead>
-									<tr>
-										<th style="width: 160px;">Date &amp; time</th>
-										<th>Barber</th>
-										<th>Service</th>
-										<th style="width: 100px;">Price</th>
-										<th style="width: 130px;">Discount</th>
-										<th style="width: 100px;">Net</th>
-										<th>Payments</th>
-									</tr>
-								</thead>
-								<tbody>
-									for _, h := range haircuts {
+						<div class="panel-body panel-body-flush">
+							if len(haircuts) == 0 {
+								<div class="empty-state">
+									<p>No haircuts in this range.</p>
+								</div>
+							} else {
+								<table class="data-table">
+									<thead>
 										<tr>
-											<td class="data-mono">{ h.CreatedAt.Format("Jan 2 15:04") }</td>
-											<td>{ barberName[h.BarberID] }</td>
-											<td>{ serviceName[h.ServiceID] }</td>
-											<td>{ domain.FormatCentavos(h.PriceCentavos) }</td>
-											<td>
-												if h.DiscountCentavos > 0 {
-													<span class="data-strong">{ domain.FormatCentavos(h.DiscountCentavos) }</span>
-													if h.DiscountReason != "" {
-														<br/><small>({ h.DiscountReason })</small>
-													}
-												} else {
-													<span class="data-dim">—</span>
-												}
-											</td>
-											<td class="data-strong">{ domain.FormatCentavos(h.NetCentavos) }</td>
-											<td>
-												if len(h.Payments) == 0 {
-													<small>free</small>
-												} else {
-													for i, p := range h.Payments {
-														if i > 0 {
-															<br/>
-														}
-														<span class="pay-tag">{ string(p.Method) }</span>
-														{ domain.FormatCentavos(p.AmountCentavos) }
-													}
-												}
-											</td>
+											<th style="width: 160px;">Date &amp; time</th>
+											<th>Barber</th>
+											<th>Service</th>
+											<th style="width: 110px;">Price</th>
+											<th style="width: 140px;">Discount</th>
+											<th style="width: 110px;">Net</th>
+											<th>Payments</th>
 										</tr>
-									}
-								</tbody>
-							</table>
-						}
+									</thead>
+									<tbody>
+										for _, h := range haircuts {
+											<tr>
+												<td class="data-mono" data-label="Date">
+													{ h.CreatedAt.Format("Jan 2, 2006") }
+													<br/>
+													<small>{ h.CreatedAt.Format("15:04") }</small>
+												</td>
+												<td data-label="Barber">{ barberName[h.BarberID] }</td>
+												<td data-label="Service">{ serviceName[h.ServiceID] }</td>
+												<td data-label="Price">{ domain.FormatCentavos(h.PriceCentavos) }</td>
+												<td data-label="Discount">
+													if h.DiscountCentavos > 0 {
+														<span class="data-strong">{ domain.FormatCentavos(h.DiscountCentavos) }</span>
+														if h.DiscountReason != "" {
+															<br/><small>({ h.DiscountReason })</small>
+														}
+													} else {
+														<span class="data-dim">—</span>
+													}
+												</td>
+												<td class="data-strong" data-label="Net">{ domain.FormatCentavos(h.NetCentavos) }</td>
+												<td data-label="Payments">
+													if len(h.Payments) == 0 {
+														<small>free</small>
+													} else {
+														for i, p := range h.Payments {
+															if i > 0 {
+																<br/>
+															}
+															<span class="pay-tag">{ string(p.Method) }</span>
+															{ domain.FormatCentavos(p.AmountCentavos) }
+														}
+													}
+												</td>
+											</tr>
+										}
+									</tbody>
+								</table>
+							}
+						</div>
 					</section>
 
 				</main>

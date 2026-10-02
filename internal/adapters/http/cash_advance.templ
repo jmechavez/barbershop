@@ -17,14 +17,15 @@ templ CashAdvancesPage(
 ) {
 	<!DOCTYPE html>
 	<html>
-			<head>
-		<meta charset="utf-8"/>
-		<meta name="viewport" content="width=device-width, initial-scale=1"/>
-		<title>Something · DRFT Barbershop</title>
-		<meta name="theme-color" content="#000000"/>
-		<link rel="icon" type="image/png" href="/static/favicon.png"/>
-		<link rel="stylesheet" href="/static/style.css"/>
-	</head>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>Cash Advances · DRFT Barbershop</title>
+			<meta name="theme-color" content="#000000"/>
+			<link rel="icon" type="image/png" href="/static/favicon.png"/>
+			<link rel="stylesheet" href="/static/style.css"/>
+			<script src="/static/app.js" defer></script>
+		</head>
 		<body class="app-page">
 			<div class="app-shell">
 
@@ -53,6 +54,7 @@ templ CashAdvancesPage(
 						</p>
 					</header>
 
+					<!-- Filter -->
 					<section class="panel">
 						<div class="panel-head">
 							<h2 class="panel-title">Filter</h2>
@@ -89,42 +91,54 @@ templ CashAdvancesPage(
 						</div>
 					</section>
 
+					<!-- Results -->
 					<section class="panel">
 						<div class="panel-head">
-							<h2 class="panel-title">Advances</h2>
+							<h2 class="panel-title">Results</h2>
 							<p class="panel-sub">
-								{ fmt.Sprintf("%d", len(advances)) } entries · total <strong>{ domain.FormatCentavos(totalCentavos) }</strong>
+								{ fmt.Sprintf("%d", len(advances)) } entries
+								if len(advances) > 0 {
+									· total { domain.FormatCentavos(totalCentavos) }
+								}
 							</p>
 						</div>
 
-						if len(advances) == 0 {
-							<div class="empty-state">
-								<p>No cash advances in this range.</p>
-							</div>
-						} else {
-							<table class="data-table">
-								<thead>
-									<tr>
-										<th style="width: 60px;">ID</th>
-										<th>Barber</th>
-										<th style="width: 120px;">Amount</th>
-										<th style="width: 160px;">Date</th>
-										<th>Note</th>
-									</tr>
-								</thead>
-								<tbody>
-									for _, a := range advances {
+						<div class="panel-body panel-body-flush">
+							if len(advances) == 0 {
+								<div class="empty-state">
+									<p>No cash advances in this range.</p>
+								</div>
+							} else {
+								<table class="data-table">
+									<thead>
 										<tr>
-											<td class="data-mono">{ fmt.Sprintf("%d", a.ID) }</td>
-											<td>{ barberName[a.BarberID] }</td>
-											<td class="data-strong">{ domain.FormatCentavos(a.AmountCentavos) }</td>
-											<td class="data-dim">{ a.TakenAt.Format("Jan 2, 2006") }</td>
-											<td>{ a.Note }</td>
+											<th style="width: 80px;">ID</th>
+											<th>Barber</th>
+											<th style="width: 130px;">Amount</th>
+											<th style="width: 170px;">Date</th>
+											<th>Note</th>
 										</tr>
-									}
-								</tbody>
-							</table>
-						}
+									</thead>
+									<tbody>
+										for _, a := range advances {
+											<tr>
+												<td class="data-mono" data-label="ID">{ fmt.Sprintf("%d", a.ID) }</td>
+												<td data-label="Barber">{ barberName[a.BarberID] }</td>
+												<td class="data-strong" data-label="Amount">{ domain.FormatCentavos(a.AmountCentavos) }</td>
+												<td class="data-dim" data-label="Date">{ a.TakenAt.Format("Jan 2, 2006") }</td>
+												<td data-label="Note">
+													if a.Note != "" {
+														{ a.Note }
+													} else {
+														<span class="data-dim">—</span>
+													}
+												</td>
+											</tr>
+										}
+									</tbody>
+								</table>
+							}
+						</div>
 					</section>
 
 				</main>

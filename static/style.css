@@ -19,6 +19,10 @@
     --success: #5d9d6d;
 }
 
+html {
+	scrollbar-gutter: stable;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -2601,4 +2605,206 @@ body.loaded .skeleton-only {
     .total-bar .amount {
         font-size: 1.7em;
     }
+}
+
+/* ============================================================
+   Counter — payment cards
+   ============================================================ */
+
+.payment-section {
+	margin-top: 24px;
+	padding-top: 24px;
+	border-top: 1px solid var(--line);
+}
+
+.payment-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: 16px;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.payment-head-label {
+	font-size: 0.85em;
+	font-weight: 700;
+	letter-spacing: 0.25em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+}
+
+.payment-head-hint {
+	font-size: 0.85em;
+	color: var(--text-dim);
+	letter-spacing: 0.05em;
+	opacity: 0.7;
+}
+
+.payment-cards {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 14px;
+	margin-bottom: 20px;
+}
+
+.pay-card {
+	position: relative;
+	display: block;
+	background: var(--bg-elev);
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	padding: 16px 18px 14px;
+	margin: 0;
+	cursor: text;
+	transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pay-card:hover {
+	border-color: var(--line-hi);
+}
+
+.pay-card:focus-within {
+	border-color: var(--silver-hi);
+	box-shadow: 0 0 0 1px var(--silver-hi),
+	            0 8px 24px -8px rgba(214, 214, 218, 0.15);
+}
+
+.pay-card.has-value {
+	border-color: var(--silver-lo);
+	background: #181820;
+}
+
+.pay-card-name {
+	display: block;
+	font-size: 0.72em;
+	font-weight: 700;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+	margin-bottom: 8px;
+}
+
+.pay-card-currency {
+	position: absolute;
+	left: 18px;
+	bottom: 14px;
+	font-size: 1.4em;
+	font-weight: 800;
+	color: var(--text-dim);
+	pointer-events: none;
+}
+
+.pay-input {
+	display: block;
+	width: 100%;
+	margin: 0;
+	padding: 0 0 0 26px;
+	background: transparent;
+	border: none;
+	color: var(--silver-hi);
+	font: inherit;
+	font-size: 1.8em;
+	font-weight: 900;
+	letter-spacing: -0.01em;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+	text-align: left;
+	outline: none;
+}
+
+/* Hide number input spinners */
+.pay-input::-webkit-outer-spin-button,
+.pay-input::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+.pay-input[type=number] {
+	-moz-appearance: textfield;
+}
+
+.pay-input:focus {
+	outline: none;
+}
+
+/* Totals box */
+.payment-totals {
+	background: var(--bg-elev);
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	padding: 14px 18px;
+}
+
+.pay-total-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	padding: 6px 0;
+	font-size: 1em;
+}
+
+.pay-total-label {
+	font-size: 0.85em;
+	font-weight: 700;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+}
+
+.pay-total-value {
+	font-size: 1.15em;
+	font-weight: 800;
+	color: var(--silver-hi);
+	font-variant-numeric: tabular-nums;
+}
+
+.pay-total-final {
+	margin-top: 6px;
+	padding-top: 12px;
+	border-top: 1px solid var(--line);
+}
+
+.pay-total-final .pay-total-value {
+	font-size: 1.4em;
+	font-weight: 900;
+}
+
+/* Success state — remaining is 0 */
+.payment-totals.complete {
+	border-color: var(--success);
+	background: rgba(93, 157, 109, 0.06);
+}
+.payment-totals.complete .pay-total-final .pay-total-value {
+	color: var(--success);
+}
+
+/* Short state — remaining > 0 */
+.payment-totals.short .pay-total-final .pay-total-value {
+	color: #d0a05a;
+}
+
+/* Over state — paid > net */
+.payment-totals.over .pay-total-final .pay-total-value {
+	color: var(--danger);
+}
+
+/* Mobile: payment cards stack */
+@media (max-width: 720px) {
+	.payment-cards {
+		grid-template-columns: 1fr;
+		gap: 10px;
+	}
+	.pay-card {
+		padding: 14px 16px 12px;
+	}
+	.pay-card-currency {
+		left: 16px;
+		bottom: 12px;
+		font-size: 1.2em;
+	}
+	.pay-input {
+		font-size: 1.6em;
+		padding-left: 22px;
+	}
+	.payment-head-hint { display: none; }
 }

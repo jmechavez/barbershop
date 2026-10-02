@@ -217,3 +217,86 @@
 		});
 	}, true);
 })();
+
+// 12. Counter — live payment calculation.
+(function () {
+	const form = document.getElementById('counter-form');
+	if (!form) return;
+
+	const serviceSelect = document.getElementById('service-select');
+	const discountInput = document.getElementById('discount-input');
+	const netDueEl = document.getElementById('net-due');
+	const totalPaidEl = document.getElementById('total-paid');
+	const remainingEl = document.getElementById('remaining');
+	const totalsBox = document.getElementById('payment-totals');
+	const payInputs = form.querySelectorAll('.pay-input');
+
+	function pesos(centavos) {
+		const sign = centavos < 0 ? '-' : '';
+		const abs = Math.abs(centavos);
+		const whole = Math.floor(abs / 100);
+		const frac = abs % 100;
+		const wholeStr = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+		return sign + '₱' + wholeStr + '.' + String(frac).padStart(2, '0');
+	}
+
+	function currentServicePriceCentavos() {
+		if (!serviceSelect) return 0;
+		const opt = serviceSelect.options[serviceSelect.selectedIndex];
+		if (!opt) return 0;
+		const p = parseInt(opt.getAttribute('data-price') || '0', 10);
+		return isNaN(p) ? 0 : p;
+	}
+
+	function currentDiscountCentavos() {
+		if (!discountInput) return 0;
+		const p = parseInt(discountInput.value || '0', 10);
+		return isNaN(p) ? 0 : p * 100;
+	}
+
+	function totalPaidCentavos() {
+		let total = 0;
+		payInputs.forEach((inp) => {
+			const p = parseInt(inp.value || '0', 10);
+			if (!isNaN(p) && p > 0) total += p * 100;
+		});
+		return total;
+	}
+
+	function update() {
+		const price = currentServicePriceCentavos();
+		const discount = Math.min(currentDiscountCentavos(), price);
+		const net = price - discount;
+		const paid = totalPaidCentavos();
+		const remaining = net - paid;
+
+		netDueEl.textContent = pesos(net);
+		totalPaidEl.textContent = pesos(paid);
+		remainingEl.textContent = pesos(remaining);
+
+		// Card "has-value" state
+		payInputs.forEach((inp) => {
+			const card = inp.closest('.pay-card');
+			const v = parseInt(inp.value || '0', 10);
+			card.classList.toggle('has-value', !isNaN(v) && v > 0);
+		});
+
+		// Totals box state
+		totalsBox.classList.remove('complete', 'short', 'over');
+		if (remaining === 0 && net > 0) {
+			totalsBox.classList.add('complete');
+		} else if (remaining > 0) {
+			totalsBox.classList.add('short');
+		} else if (remaining < 0) {
+			totalsBox.classList.add('over');
+		}
+	}
+
+	// Wire up events
+	if (serviceSelect) serviceSelect.addEventListener('change', update);
+	if (discountInput) discountInput.addEventListener('input', update);
+	payInputs.forEach((inp) => inp.addEventListener('input', update));
+
+	// Initial state
+	update();
+})();

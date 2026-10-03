@@ -137,20 +137,6 @@ templ PublicPage(services []domain.Service, user domain.User, loggedIn bool) {
 								}
 							}
 						</div>
-						<h2>Signature Packages</h2>
-						<div class="svc-list">
-							for _, s := range services {
-								if s.Category == "package" {
-									<label class="svc-row">
-										<input type="checkbox" name="service" value={ fmt.Sprintf("%d", s.PriceCentavos) }/>
-										<div class="svc-left">
-											<p class="svc-name">{ s.Name }</p>
-										</div>
-										<div class="svc-price">{ s.FormatPrice() }</div>
-									</label>
-								}
-							}
-						</div>
 						<div class="total-bar">
 							<div>
 								<div class="label">Total</div>

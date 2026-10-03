@@ -61,3 +61,21 @@ type CashAdvanceRepository interface {
 	ListByBarber(ctx context.Context, barberID int, since time.Time) ([]domain.CashAdvance, error)
 	ListByBarberRange(ctx context.Context, barberID int, from, to time.Time) ([]domain.CashAdvance, error)
 }
+
+type AttendanceRepository interface {
+	// Set marks a barber present or absent for a given day.
+	// If a record exists for that (barber, day), it is updated.
+	Set(ctx context.Context, barberID int, day time.Time, status domain.AttendanceStatus) error
+
+	// GetForDay returns the attendance for a specific barber on a specific day.
+	// Returns ErrAttendanceNotFound if no record exists.
+	GetForDay(ctx context.Context, barberID int, day time.Time) (domain.Attendance, error)
+
+	// ListForBarberRange returns attendance records for a barber between from and to.
+	ListForBarberRange(ctx context.Context, barberID int, from, to time.Time) ([]domain.Attendance, error)
+
+	// ListForDay returns all attendance records for a specific day.
+	ListForDay(ctx context.Context, day time.Time) ([]domain.Attendance, error)
+}
+
+var ErrAttendanceNotFound = errors.New("attendance not found")

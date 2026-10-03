@@ -1,0 +1,241 @@
+package http
+
+import (
+	"fmt"
+
+	"barbershop/internal/domain"
+)
+
+templ SalariesPage(
+	admin domain.User,
+	barbers []domain.User,
+	fromStr, toStr string,
+	selectedBarberID int,
+	selectedBarberName string,
+	summaries map[int]domain.SalarySummary,
+) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>Salaries · DRFT Barbershop</title>
+			<meta name="theme-color" content="#000000"/>
+			<link rel="icon" type="image/png" href="/static/favicon.png"/>
+			<link rel="stylesheet" href="/static/style.css"/>
+			<script src="/static/app.js" defer></script>
+		</head>
+		<body class="app-page">
+			<div class="app-shell">
+
+				<nav class="app-nav">
+					<a href="/" class="app-nav-brand">DRFT</a>
+					<div class="app-nav-tabs">
+						<a href="/admin">Admin</a>
+						<a href="/counter">Counter</a>
+						<a href="/admin/haircuts">Haircuts</a>
+						<a href="/admin/cash-advances">Advances</a>
+						<a href="/admin/salaries" class="active">Salaries</a>
+					</div>
+					<div class="app-nav-user">
+						<span>{ admin.FullName }</span>
+						<form method="post" action="/logout">
+							<button type="submit">Logout</button>
+						</form>
+					</div>
+				</nav>
+
+				<main class="app-main">
+
+					<header class="app-header">
+						<h1 class="app-title">Salaries</h1>
+						<p class="app-sub">
+							From <strong>{ fromStr }</strong> to <strong>{ toStr }</strong>
+						</p>
+					</header>
+
+					<!-- Filter -->
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Filter</h2>
+						</div>
+						<div class="panel-body">
+							<form method="get" action="/admin/salaries" class="inline-form">
+								<label class="inline-label">
+									<span>Barber</span>
+									<select name="barber_id">
+										if selectedBarberID == 0 {
+											<option value="0" selected>All barbers</option>
+										} else {
+											<option value="0">All barbers</option>
+										}
+										for _, b := range barbers {
+											if b.ID == selectedBarberID {
+												<option value={ fmt.Sprintf("%d", b.ID) } selected>{ b.FullName }</option>
+											} else {
+												<option value={ fmt.Sprintf("%d", b.ID) }>{ b.FullName }</option>
+											}
+										}
+									</select>
+								</label>
+								<label class="inline-label">
+									<span>From</span>
+									<input type="date" name="from" value={ fromStr } required/>
+								</label>
+								<label class="inline-label">
+									<span>To</span>
+									<input type="date" name="to" value={ toStr } required/>
+								</label>
+								<button type="submit">Show</button>
+							</form>
+						</div>
+					</section>
+
+					if selectedBarberID > 0 {
+						// Single barber view
+						if summary, ok := summaries[selectedBarberID]; ok {
+							<!-- Summary stats -->
+							<section class="stats-row">
+								<div class="stat-card">
+									<div class="stat-label">Working days</div>
+									<div class="stat-value">{ fmt.Sprintf("%d", countPresentDays(summary.Days)) }</div>
+								</div>
+								<div class="stat-card">
+									<div class="stat-label">Gross salary</div>
+									<div class="stat-value">{ domain.FormatCentavos(summary.GrossSalary) }</div>
+								</div>
+								<div class="stat-card">
+									<div class="stat-label">Advances</div>
+									<div class="stat-value">{ domain.FormatCentavos(summary.AdvancesTotal) }</div>
+								</div>
+								<div class="stat-card stat-card-accent">
+									<div class="stat-label">Take home</div>
+									<div class="stat-value">{ domain.FormatCentavos(summary.TakeHome) }</div>
+								</div>
+							</section>
+
+							<!-- Daily breakdown -->
+							<section class="panel">
+								<div class="panel-head">
+									<h2 class="panel-title">Daily breakdown · { selectedBarberName }</h2>
+									<p class="panel-sub">
+										Daily minimum { domain.FormatCentavos(summary.DailyFloor) } · commission { fmt.Sprintf("%d%%", domain.CommissionPercent) }
+									</p>
+								</div>
+
+								<div class="panel-body panel-body-flush">
+									if len(summary.Days) == 0 {
+										<div class="empty-state">
+											<p>No attendance records in this range.</p>
+										</div>
+									} else {
+										<table class="data-table">
+											<thead>
+												<tr>
+													<th style="width: 180px;">Date</th>
+													<th style="width: 80px;">Cuts</th>
+													<th style="width: 130px;">List total</th>
+													<th style="width: 130px;">Commission</th>
+													<th style="width: 130px;">Paid</th>
+												</tr>
+											</thead>
+											<tbody>
+												for _, d := range summary.Days {
+													if d.Absent {
+														<tr class="row-absent">
+															<td data-label="Date">{ d.Date.Format("Mon, Jan 2") }</td>
+															<td colspan="4">
+																<span class="absent-tag">absent</span>
+															</td>
+														</tr>
+													} else {
+														<tr>
+															<td data-label="Date">{ d.Date.Format("Mon, Jan 2") }</td>
+															<td class="data-mono" data-label="Cuts">{ fmt.Sprintf("%d", d.HaircutCount) }</td>
+															<td data-label="List total">{ domain.FormatCentavos(d.ListTotal) }</td>
+															<td data-label="Commission">{ domain.FormatCentavos(d.Commission) }</td>
+															<td data-label="Paid">
+																<span class="data-strong">{ domain.FormatCentavos(d.Paid) }</span>
+																if d.FloorApplied {
+																	<br/><small class="floor-tag">minimum applied</small>
+																}
+															</td>
+														</tr>
+													}
+												}
+											</tbody>
+										</table>
+									}
+								</div>
+							</section>
+
+							<!-- Totals -->
+							if len(summary.Days) > 0 {
+								<div class="totals-box">
+									<div class="totals-row">
+										<span>Gross salary</span>
+										<strong>{ domain.FormatCentavos(summary.GrossSalary) }</strong>
+									</div>
+									<div class="totals-row">
+										<span>Cash advances</span>
+										<strong>− { domain.FormatCentavos(summary.AdvancesTotal) }</strong>
+									</div>
+									<div class="totals-row totals-row-final">
+										<span>Take home</span>
+										<strong>{ domain.FormatCentavos(summary.TakeHome) }</strong>
+									</div>
+								</div>
+							}
+						}
+					} else {
+						// All barbers — compact table
+						<section class="panel">
+							<div class="panel-head">
+								<h2 class="panel-title">All barbers</h2>
+								<p class="panel-sub">
+									{ fmt.Sprintf("%d", len(barbers)) } barbers · commission { fmt.Sprintf("%d%%", domain.CommissionPercent) }
+								</p>
+							</div>
+
+							<div class="panel-body panel-body-flush">
+								if len(barbers) == 0 {
+									<div class="empty-state">
+										<p>No barbers yet.</p>
+									</div>
+								} else {
+									<table class="data-table">
+										<thead>
+											<tr>
+												<th>Barber</th>
+												<th style="width: 90px;">Present</th>
+												<th style="width: 90px;">Absent</th>
+												<th style="width: 130px;">Gross salary</th>
+												<th style="width: 130px;">Advances</th>
+												<th style="width: 140px;">Take home</th>
+											</tr>
+										</thead>
+										<tbody>
+											for _, b := range barbers {
+												if s, ok := summaries[b.ID]; ok {
+													<tr>
+														<td data-label="Barber">{ b.FullName }</td>
+														<td class="data-mono" data-label="Present">{ fmt.Sprintf("%d", countPresentDays(s.Days)) }</td>
+														<td class="data-mono data-dim" data-label="Absent">{ fmt.Sprintf("%d", countAbsentDays(s.Days)) }</td>
+														<td data-label="Gross">{ domain.FormatCentavos(s.GrossSalary) }</td>
+														<td class="data-dim" data-label="Advances">{ domain.FormatCentavos(s.AdvancesTotal) }</td>
+														<td class="data-strong" data-label="Take home">{ domain.FormatCentavos(s.TakeHome) }</td>
+													</tr>
+												}
+											}
+										</tbody>
+									</table>
+								}
+							</div>
+						</section>
+					}
+
+				</main>
+			</div>
+		</body>
+	</html>
+}

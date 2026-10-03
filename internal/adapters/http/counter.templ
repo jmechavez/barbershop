@@ -13,6 +13,8 @@ templ CounterPage(
 	haircuts []domain.Haircut,
 	barberName map[int]string,
 	serviceName map[int]string,
+	attendanceDate string,
+	attendancePresent map[int]bool,
 	errorMsg string,
 ) {
 	<!DOCTYPE html>
@@ -36,6 +38,7 @@ templ CounterPage(
 						<a href="/counter" class="active">Counter</a>
 						<a href="/admin/haircuts">Haircuts</a>
 						<a href="/admin/cash-advances">Advances</a>
+						<a href="/admin/salaries">Salaries</a>
 					</div>
 					<div class="app-nav-user">
 						<span>{ admin.FullName }</span>
@@ -52,6 +55,46 @@ templ CounterPage(
 						<p class="app-sub">Record a haircut</p>
 					</header>
 
+					<!-- Who's working today? -->
+					<section class="panel">
+						<div class="panel-head">
+							<h2 class="panel-title">Who's working today?</h2>
+							<p class="panel-sub">
+								{ fmt.Sprintf("%d", len(barbers)) } barbers · { attendanceDate }
+							</p>
+						</div>
+						<div class="panel-body">
+							if len(barbers) == 0 {
+								<div class="empty-state">
+									<p>No barbers yet.</p>
+								</div>
+							} else {
+								<form method="post" action="/counter/attendance" class="attendance-form">
+									<input type="hidden" name="date" value={ attendanceDate }/>
+									<div class="attendance-grid">
+										for _, b := range barbers {
+											<label class="attendance-card">
+												<input type="checkbox"
+												       name={ "present_" + fmt.Sprintf("%d", b.ID) }
+												       value="1"
+												       if attendancePresent[b.ID] {
+													       checked
+												       }/>
+												<span class="attendance-name">{ b.FullName }</span>
+											</label>
+										}
+									</div>
+									<button type="submit"
+									        class="attendance-save js-confirm"
+									        data-confirm="Save today's attendance? Checked barbers will be marked present, unchecked barbers will be marked absent.">
+										Save attendance
+									</button>
+								</form>
+							}
+						</div>
+					</section>
+
+					<!-- New haircut -->
 					<section class="panel">
 						<div class="panel-head">
 							<h2 class="panel-title">New haircut</h2>
@@ -166,6 +209,7 @@ templ CounterPage(
 						</div>
 					</section>
 
+					<!-- Today's haircuts -->
 					<section class="panel">
 						<div class="panel-head">
 							<h2 class="panel-title">Today</h2>

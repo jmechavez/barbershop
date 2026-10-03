@@ -21,9 +21,14 @@ type Handlers struct {
 	Haircuts     *app.HaircutService
 	CashAdvances *app.CashAdvanceService
 	Salary       *app.SalaryService
+	Attendance   *app.AttendanceService
 	Auth         *app.AuthService
 	Sessions     *app.SessionService
 }
+
+// ============================================================
+// Public
+// ============================================================
 
 func (h *Handlers) Public(w http.ResponseWriter, r *http.Request) {
 	services, err := h.Services.List(r.Context())
@@ -52,6 +57,10 @@ func (h *Handlers) Pick(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", domain.FormatCentavos(total))
 }
 
+// ============================================================
+// Auth
+// ============================================================
+
 func (h *Handlers) LoginForm(w http.ResponseWriter, r *http.Request) {
 	LoginPage("").Render(r.Context(), w)
 }
@@ -65,17 +74,12 @@ func (h *Handlers) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 
-	fmt.Printf("DEBUG: form email=%q password=%q\n", email, password)
-
 	user, err := h.Auth.Authenticate(r.Context(), email, password)
 	if err != nil {
-		fmt.Printf("DEBUG: Authenticate failed: %v\n", err)
 		msg := "Invalid email or password."
 		LoginPage(msg).Render(r.Context(), w)
 		return
 	}
-
-	fmt.Printf("DEBUG: Authenticate OK user=%d\n", user.ID)
 
 	token, err := h.Sessions.Start(r.Context(), user.ID)
 	if err != nil {
@@ -85,7 +89,6 @@ func (h *Handlers) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 
 	setSessionCookie(w, token)
 
-	// Send the user to the page they'll actually use.
 	if user.Role == domain.RoleAdmin {
 		http.Redirect(w, r, "/admin", http.StatusSeeOther)
 	} else {
@@ -102,6 +105,10 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	clearSessionCookie(w)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
+
+// ============================================================
+// Admin — home page
+// ============================================================
 
 func (h *Handlers) AdminHomePage(w http.ResponseWriter, r *http.Request) {
 	user, _ := CurrentUser(r.Context())
@@ -123,7 +130,7 @@ func (h *Handlers) AdminHomePage(w http.ResponseWriter, r *http.Request) {
 		barberName[u.ID] = u.FullName
 	}
 
-	// Collect recent advances, then keep only the newest 5 overall.
+	// Fetch recent advances, keep the newest 5 overall.
 	var allAdvances []domain.CashAdvance
 	for _, u := range users {
 		if u.Role != domain.RoleBarber {
@@ -146,6 +153,10 @@ func (h *Handlers) AdminHomePage(w http.ResponseWriter, r *http.Request) {
 
 	AdminHome(user, services, users, allAdvances, barberName).Render(r.Context(), w)
 }
+
+// ============================================================
+// Admin — services
+// ============================================================
 
 func (h *Handlers) AdminUpdateService(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
@@ -221,6 +232,26 @@ func (h *Handlers) AdminCreateService(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
 
+func (h *Handlers) AdminDeleteService(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Services.Delete(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// ============================================================
+// Admin — users
+// ============================================================
+
 func (h *Handlers) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad form", http.StatusBadRequest)
@@ -259,6 +290,325 @@ func (h *Handlers) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
 
+func (h *Handlers) AdminResetPassword(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	userID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "bad user id", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+
+	newPassword := r.FormValue("new_password")
+	if len(newPassword) < 6 {
+		http.Error(w, "password must be at least 6 characters", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Auth.ResetPassword(r.Context(), userID, newPassword); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+// ============================================================
+// Admin — cash advances
+// ============================================================
+
+func (h *Handlers) AdminCreateCashAdvance(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+
+	barberID, err := strconv.Atoi(r.FormValue("barber_id"))
+	if err != nil {
+		http.Error(w, "bad barber", http.StatusBadRequest)
+		return
+	}
+
+	amountPesos, err := strconv.Atoi(r.FormValue("amount_pesos"))
+	if err != nil || amountPesos <= 0 {
+		http.Error(w, "bad amount", http.StatusBadRequest)
+		return
+	}
+	amountCentavos := amountPesos * 100
+
+	note := r.FormValue("note")
+
+	if _, err := h.CashAdvances.Record(r.Context(), barberID, amountCentavos, note); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+func (h *Handlers) AdminCashAdvancesPage(w http.ResponseWriter, r *http.Request) {
+	admin, _ := CurrentUser(r.Context())
+
+	allUsers, err := h.Users.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var barbers []domain.User
+	barberName := map[int]string{}
+	for _, u := range allUsers {
+		barberName[u.ID] = u.FullName
+		if u.Role == domain.RoleBarber {
+			barbers = append(barbers, u)
+		}
+	}
+
+	now := time.Now()
+	fromStr := r.URL.Query().Get("from")
+	toStr := r.URL.Query().Get("to")
+	barberStr := r.URL.Query().Get("barber_id")
+
+	if fromStr == "" {
+		fromStr = now.AddDate(0, 0, -30).Format("2006-01-02")
+	}
+	if toStr == "" {
+		toStr = now.Format("2006-01-02")
+	}
+
+	from, err := time.ParseInLocation("2006-01-02", fromStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad from date", http.StatusBadRequest)
+		return
+	}
+	to, err := time.ParseInLocation("2006-01-02", toStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad to date", http.StatusBadRequest)
+		return
+	}
+	if to.Before(from) {
+		http.Error(w, "to date is before from date", http.StatusBadRequest)
+		return
+	}
+	toExclusive := to.AddDate(0, 0, 1)
+
+	selectedBarberID := 0
+	if barberStr != "" {
+		selectedBarberID, _ = strconv.Atoi(barberStr)
+	}
+
+	var advances []domain.CashAdvance
+	if selectedBarberID > 0 {
+		as, err := h.CashAdvances.ListRange(r.Context(), selectedBarberID, from, toExclusive)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		advances = as
+	} else {
+		for _, b := range barbers {
+			as, err := h.CashAdvances.ListRange(r.Context(), b.ID, from, toExclusive)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			advances = append(advances, as...)
+		}
+	}
+
+	sort.Slice(advances, func(i, j int) bool {
+		return advances[i].TakenAt.After(advances[j].TakenAt)
+	})
+
+	total := domain.SumAdvances(advances)
+
+	CashAdvancesPage(
+		admin, barbers, advances,
+		barberName, fromStr, toStr, selectedBarberID, total,
+	).Render(r.Context(), w)
+}
+
+// ============================================================
+// Admin — haircuts list
+// ============================================================
+
+func (h *Handlers) AdminHaircutsPage(w http.ResponseWriter, r *http.Request) {
+	admin, _ := CurrentUser(r.Context())
+
+	allUsers, err := h.Users.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var barbers []domain.User
+	barberName := map[int]string{}
+	for _, u := range allUsers {
+		barberName[u.ID] = u.FullName
+		if u.Role == domain.RoleBarber {
+			barbers = append(barbers, u)
+		}
+	}
+
+	services, err := h.Services.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	serviceName := map[int]string{}
+	for _, s := range services {
+		serviceName[s.ID] = s.Name
+	}
+
+	now := time.Now()
+	fromStr := r.URL.Query().Get("from")
+	toStr := r.URL.Query().Get("to")
+	barberStr := r.URL.Query().Get("barber_id")
+
+	if fromStr == "" {
+		fromStr = now.Format("2006-01-02")
+	}
+	if toStr == "" {
+		toStr = now.Format("2006-01-02")
+	}
+
+	from, err := time.ParseInLocation("2006-01-02", fromStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad from date", http.StatusBadRequest)
+		return
+	}
+	to, err := time.ParseInLocation("2006-01-02", toStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad to date", http.StatusBadRequest)
+		return
+	}
+	if to.Before(from) {
+		http.Error(w, "to date is before from date", http.StatusBadRequest)
+		return
+	}
+	toExclusive := to.AddDate(0, 0, 1)
+
+	selectedBarberID := 0
+	if barberStr != "" {
+		selectedBarberID, _ = strconv.Atoi(barberStr)
+	}
+
+	var haircuts []domain.Haircut
+	if selectedBarberID > 0 {
+		haircuts, err = h.Haircuts.RangeForBarber(r.Context(), selectedBarberID, from, toExclusive)
+	} else {
+		haircuts, err = h.Haircuts.Range(r.Context(), from, toExclusive)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	sort.Slice(haircuts, func(i, j int) bool {
+		return haircuts[i].CreatedAt.After(haircuts[j].CreatedAt)
+	})
+
+	HaircutsPage(
+		admin, barbers, haircuts,
+		barberName, serviceName,
+		fromStr, toStr, selectedBarberID,
+	).Render(r.Context(), w)
+}
+
+// ============================================================
+// Admin — salaries
+// ============================================================
+
+func (h *Handlers) AdminSalariesPage(w http.ResponseWriter, r *http.Request) {
+	admin, _ := CurrentUser(r.Context())
+
+	allUsers, err := h.Users.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var barbers []domain.User
+	for _, u := range allUsers {
+		if u.Role == domain.RoleBarber {
+			barbers = append(barbers, u)
+		}
+	}
+
+	now := time.Now()
+	fromStr := r.URL.Query().Get("from")
+	toStr := r.URL.Query().Get("to")
+	barberStr := r.URL.Query().Get("barber_id")
+
+	if fromStr == "" {
+		fromStr = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+	}
+	if toStr == "" {
+		toStr = now.Format("2006-01-02")
+	}
+
+	from, err := time.ParseInLocation("2006-01-02", fromStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad from date", http.StatusBadRequest)
+		return
+	}
+	to, err := time.ParseInLocation("2006-01-02", toStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad to date", http.StatusBadRequest)
+		return
+	}
+	if to.Before(from) {
+		http.Error(w, "to date is before from date", http.StatusBadRequest)
+		return
+	}
+	toExclusive := to.AddDate(0, 0, 1)
+
+	selectedBarberID := 0
+	if barberStr != "" {
+		selectedBarberID, _ = strconv.Atoi(barberStr)
+	}
+
+	var ids []int
+	if selectedBarberID > 0 {
+		ids = []int{selectedBarberID}
+	} else {
+		for _, b := range barbers {
+			ids = append(ids, b.ID)
+		}
+	}
+
+	summaries := map[int]domain.SalarySummary{}
+	if len(ids) > 0 {
+		summaries, err = h.Salary.ForAllRange(r.Context(), ids, from, toExclusive)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	selectedName := ""
+	if selectedBarberID > 0 {
+		for _, b := range barbers {
+			if b.ID == selectedBarberID {
+				selectedName = b.FullName
+				break
+			}
+		}
+	}
+
+	SalariesPage(
+		admin, barbers,
+		fromStr, toStr,
+		selectedBarberID, selectedName,
+		summaries,
+	).Render(r.Context(), w)
+}
+
+// ============================================================
+// Counter (admin-only)
+// ============================================================
+
 func (h *Handlers) CounterHome(w http.ResponseWriter, r *http.Request) {
 	h.renderCounter(w, r, "")
 }
@@ -296,7 +646,26 @@ func (h *Handlers) renderCounter(w http.ResponseWriter, r *http.Request, errorMs
 		return
 	}
 
-	CounterPage(admin, barbers, services, haircuts, barberName, serviceName, errorMsg).Render(r.Context(), w)
+	today := time.Now()
+	attendanceList, err := h.Attendance.ListForDay(r.Context(), today)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	attendancePresent := map[int]bool{}
+	for _, a := range attendanceList {
+		if a.Status == domain.AttendancePresent {
+			attendancePresent[a.BarberID] = true
+		}
+	}
+	attendanceDate := today.Format("2006-01-02")
+
+	CounterPage(
+		admin, barbers, services, haircuts,
+		barberName, serviceName,
+		attendanceDate, attendancePresent,
+		errorMsg,
+	).Render(r.Context(), w)
 }
 
 func (h *Handlers) CounterRecordHaircut(w http.ResponseWriter, r *http.Request) {
@@ -305,23 +674,18 @@ func (h *Handlers) CounterRecordHaircut(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Barber
-	barberStr := r.FormValue("barber_id")
-	barberID, err := strconv.Atoi(barberStr)
+	barberID, err := strconv.Atoi(r.FormValue("barber_id"))
 	if err != nil {
 		http.Error(w, "bad barber", http.StatusBadRequest)
 		return
 	}
 
-	// Service
-	serviceStr := r.FormValue("service_id")
-	serviceID, err := strconv.Atoi(serviceStr)
+	serviceID, err := strconv.Atoi(r.FormValue("service_id"))
 	if err != nil {
 		http.Error(w, "bad service", http.StatusBadRequest)
 		return
 	}
 
-	// Discount (pesos, optional)
 	discountPesos := 0
 	if s := r.FormValue("discount_pesos"); s != "" {
 		discountPesos, err = strconv.Atoi(s)
@@ -333,7 +697,6 @@ func (h *Handlers) CounterRecordHaircut(w http.ResponseWriter, r *http.Request) 
 	discountCentavos := discountPesos * 100
 	discountReason := r.FormValue("discount_reason")
 
-	// Created at (optional, defaults to now)
 	var createdAt time.Time
 	if s := r.FormValue("created_at"); s != "" {
 		parsed, err := time.ParseInLocation("2006-01-02T15:04", s, time.Local)
@@ -346,14 +709,12 @@ func (h *Handlers) CounterRecordHaircut(w http.ResponseWriter, r *http.Request) 
 		createdAt = time.Now()
 	}
 
-	// Payments
 	payments, err := parsePayments(r)
 	if err != nil {
 		h.renderCounter(w, r, err.Error())
 		return
 	}
 
-	// Record
 	if _, err := h.Haircuts.Record(r.Context(), barberID, serviceID, discountCentavos, discountReason, payments, createdAt); err != nil {
 		h.renderCounter(w, r, err.Error())
 		return
@@ -362,9 +723,42 @@ func (h *Handlers) CounterRecordHaircut(w http.ResponseWriter, r *http.Request) 
 	http.Redirect(w, r, "/counter", http.StatusSeeOther)
 }
 
+// CounterSaveAttendance marks each barber present or absent for the given day.
+func (h *Handlers) CounterSaveAttendance(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+
+	dateStr := r.FormValue("date")
+	day, err := time.ParseInLocation("2006-01-02", dateStr, time.Local)
+	if err != nil {
+		http.Error(w, "bad date", http.StatusBadRequest)
+		return
+	}
+
+	allUsers, err := h.Users.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	for _, u := range allUsers {
+		if u.Role != domain.RoleBarber {
+			continue
+		}
+		present := r.FormValue("present_"+strconv.Itoa(u.ID)) != ""
+		if present {
+			_ = h.Attendance.MarkPresent(r.Context(), u.ID, day)
+		} else {
+			_ = h.Attendance.MarkAbsent(r.Context(), u.ID, day)
+		}
+	}
+
+	http.Redirect(w, r, "/counter", http.StatusSeeOther)
+}
+
 // parsePayments reads pay_gcash, pay_maribank, pay_cash from the form.
-// Each is a whole-peso amount. Zero amounts are skipped. Any non-zero
-// amount becomes a domain.Payment.
 func parsePayments(r *http.Request) ([]domain.Payment, error) {
 	type entry struct {
 		field  string
@@ -396,6 +790,10 @@ func parsePayments(r *http.Request) ([]domain.Payment, error) {
 	}
 	return out, nil
 }
+
+// ============================================================
+// Barber — /me
+// ============================================================
 
 func (h *Handlers) MeHome(w http.ResponseWriter, r *http.Request) {
 	user, ok := CurrentUser(r.Context())
@@ -429,35 +827,6 @@ func (h *Handlers) MeHome(w http.ResponseWriter, r *http.Request) {
 	MePage(user, haircuts, serviceName, advances).Render(r.Context(), w)
 }
 
-func (h *Handlers) AdminCreateCashAdvance(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad form", http.StatusBadRequest)
-		return
-	}
-
-	barberID, err := strconv.Atoi(r.FormValue("barber_id"))
-	if err != nil {
-		http.Error(w, "bad barber", http.StatusBadRequest)
-		return
-	}
-
-	amountPesos, err := strconv.Atoi(r.FormValue("amount_pesos"))
-	if err != nil || amountPesos <= 0 {
-		http.Error(w, "bad amount", http.StatusBadRequest)
-		return
-	}
-	amountCentavos := amountPesos * 100
-
-	note := r.FormValue("note")
-
-	if _, err := h.CashAdvances.Record(r.Context(), barberID, amountCentavos, note); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/admin", http.StatusSeeOther)
-}
-
 func (h *Handlers) MeSalaryPage(w http.ResponseWriter, r *http.Request) {
 	user, ok := CurrentUser(r.Context())
 	if !ok {
@@ -465,17 +834,14 @@ func (h *Handlers) MeSalaryPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only barbers have a salary.
 	if user.Role != domain.RoleBarber {
 		http.Error(w, "salary is for barbers only", http.StatusForbidden)
 		return
 	}
 
-	// Read date range from query string.
 	fromStr := r.URL.Query().Get("from")
 	toStr := r.URL.Query().Get("to")
 
-	// Default: first day of current month to today.
 	now := time.Now()
 	if fromStr == "" {
 		fromStr = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
@@ -498,10 +864,6 @@ func (h *Handlers) MeSalaryPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "to date is before from date", http.StatusBadRequest)
 		return
 	}
-
-	// The salary range is inclusive of the `to` date.
-	// We pass `to` as midnight of the day *after*, because the SQL
-	// query uses created_at < to.
 	toExclusive := to.AddDate(0, 0, 1)
 
 	summary, err := h.Salary.ForRange(r.Context(), user.ID, from, toExclusive)
@@ -511,221 +873,4 @@ func (h *Handlers) MeSalaryPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SalaryPage(user, summary, fromStr, toStr).Render(r.Context(), w)
-}
-
-func (h *Handlers) AdminDeleteService(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "bad id", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.Services.Delete(r.Context(), id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// htmx will remove the row from the page.
-	w.WriteHeader(http.StatusOK)
-}
-
-func (h *Handlers) AdminResetPassword(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	userID, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "bad user id", http.StatusBadRequest)
-		return
-	}
-
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad form", http.StatusBadRequest)
-		return
-	}
-
-	newPassword := r.FormValue("new_password")
-	if len(newPassword) < 6 {
-		http.Error(w, "password must be at least 6 characters", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.Auth.ResetPassword(r.Context(), userID, newPassword); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/admin", http.StatusSeeOther)
-}
-
-func (h *Handlers) AdminHaircutsPage(w http.ResponseWriter, r *http.Request) {
-	admin, _ := CurrentUser(r.Context())
-
-	// All users (to build the barber filter dropdown and name map).
-	allUsers, err := h.Users.List(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var barbers []domain.User
-	barberName := map[int]string{}
-	for _, u := range allUsers {
-		barberName[u.ID] = u.FullName
-		if u.Role == domain.RoleBarber {
-			barbers = append(barbers, u)
-		}
-	}
-
-	// Services (for name display).
-	services, err := h.Services.List(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	serviceName := map[int]string{}
-	for _, s := range services {
-		serviceName[s.ID] = s.Name
-	}
-
-	// Date range and barber filter from query string.
-	now := time.Now()
-	fromStr := r.URL.Query().Get("from")
-	toStr := r.URL.Query().Get("to")
-	barberStr := r.URL.Query().Get("barber_id")
-
-	if fromStr == "" {
-		fromStr = now.Format("2006-01-02")
-	}
-	if toStr == "" {
-		toStr = now.Format("2006-01-02")
-	}
-
-	from, err := time.ParseInLocation("2006-01-02", fromStr, time.Local)
-	if err != nil {
-		http.Error(w, "bad from date", http.StatusBadRequest)
-		return
-	}
-	to, err := time.ParseInLocation("2006-01-02", toStr, time.Local)
-	if err != nil {
-		http.Error(w, "bad to date", http.StatusBadRequest)
-		return
-	}
-	if to.Before(from) {
-		http.Error(w, "to date is before from date", http.StatusBadRequest)
-		return
-	}
-	toExclusive := to.AddDate(0, 0, 1)
-
-	selectedBarberID := 0
-	if barberStr != "" {
-		selectedBarberID, _ = strconv.Atoi(barberStr)
-	}
-
-	// Fetch haircuts.
-	var haircuts []domain.Haircut
-	if selectedBarberID > 0 {
-		haircuts, err = h.Haircuts.RangeForBarber(r.Context(), selectedBarberID, from, toExclusive)
-	} else {
-		haircuts, err = h.Haircuts.Range(r.Context(), from, toExclusive)
-	}
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Newest first, always — regardless of what the repo returned.
-	sort.Slice(haircuts, func(i, j int) bool {
-		return haircuts[i].CreatedAt.After(haircuts[j].CreatedAt)
-	})
-
-	HaircutsPage(
-		admin, barbers, haircuts,
-		barberName, serviceName,
-		fromStr, toStr, selectedBarberID,
-	).Render(r.Context(), w)
-}
-
-func (h *Handlers) AdminCashAdvancesPage(w http.ResponseWriter, r *http.Request) {
-	admin, _ := CurrentUser(r.Context())
-
-	// Barbers for the filter dropdown.
-	allUsers, err := h.Users.List(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var barbers []domain.User
-	barberName := map[int]string{}
-	for _, u := range allUsers {
-		barberName[u.ID] = u.FullName
-		if u.Role == domain.RoleBarber {
-			barbers = append(barbers, u)
-		}
-	}
-
-	// Date range from query string.
-	now := time.Now()
-	fromStr := r.URL.Query().Get("from")
-	toStr := r.URL.Query().Get("to")
-	barberStr := r.URL.Query().Get("barber_id")
-
-	if fromStr == "" {
-		fromStr = now.AddDate(0, 0, -30).Format("2006-01-02")
-	}
-	if toStr == "" {
-		toStr = now.Format("2006-01-02")
-	}
-
-	from, err := time.ParseInLocation("2006-01-02", fromStr, time.Local)
-	if err != nil {
-		http.Error(w, "bad from date", http.StatusBadRequest)
-		return
-	}
-	to, err := time.ParseInLocation("2006-01-02", toStr, time.Local)
-	if err != nil {
-		http.Error(w, "bad to date", http.StatusBadRequest)
-		return
-	}
-	if to.Before(from) {
-		http.Error(w, "to date is before from date", http.StatusBadRequest)
-		return
-	}
-	toExclusive := to.AddDate(0, 0, 1)
-
-	selectedBarberID := 0
-	if barberStr != "" {
-		selectedBarberID, _ = strconv.Atoi(barberStr)
-	}
-
-	// Fetch advances. If a barber is selected, use that one only.
-	// Otherwise, gather from all barbers.
-	var advances []domain.CashAdvance
-	if selectedBarberID > 0 {
-		as, err := h.CashAdvances.ListRange(r.Context(), selectedBarberID, from, toExclusive)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		advances = as
-	} else {
-		for _, b := range barbers {
-			as, err := h.CashAdvances.ListRange(r.Context(), b.ID, from, toExclusive)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			advances = append(advances, as...)
-		}
-	}
-
-	// Newest first.
-	sort.Slice(advances, func(i, j int) bool {
-		return advances[i].TakenAt.After(advances[j].TakenAt)
-	})
-
-	total := domain.SumAdvances(advances)
-
-	CashAdvancesPage(
-		admin, barbers, advances,
-		barberName, fromStr, toStr, selectedBarberID, total,
-	).Render(r.Context(), w)
 }

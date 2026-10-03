@@ -12,13 +12,14 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
-			<title>Something · DRFT Barbershop</title>
+			<title>Salary · DRFT Barbershop</title>
 			<meta name="theme-color" content="#000000"/>
 			<link rel="icon" type="image/png" href="/static/favicon.png"/>
 			<link rel="stylesheet" href="/static/style.css"/>
 		</head>
 		<body class="app-page">
 			<div class="app-shell">
+
 				<nav class="app-nav">
 					<a href="/" class="app-nav-brand">DRFT</a>
 					<div class="app-nav-tabs">
@@ -32,13 +33,16 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 						</form>
 					</div>
 				</nav>
+
 				<main class="app-main">
+
 					<header class="app-header">
 						<h1 class="app-title">Salary</h1>
 						<p class="app-sub">
 							From <strong>{ summary.From.Format("Jan 2") }</strong> to <strong>{ summary.To.Format("Jan 2, 2006") }</strong>
 						</p>
 					</header>
+
 					<!-- Filter -->
 					<section class="panel">
 						<div class="panel-head">
@@ -58,11 +62,12 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 							</form>
 						</div>
 					</section>
+
 					<!-- Summary stats -->
 					<section class="stats-row">
 						<div class="stat-card">
 							<div class="stat-label">Working days</div>
-							<div class="stat-value">{ fmt.Sprintf("%d", len(summary.Days)) }</div>
+							<div class="stat-value">{ fmt.Sprintf("%d", countPresentDays(summary.Days)) }</div>
 						</div>
 						<div class="stat-card">
 							<div class="stat-label">Gross salary</div>
@@ -77,6 +82,7 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 							<div class="stat-value">{ domain.FormatCentavos(summary.TakeHome) }</div>
 						</div>
 					</section>
+
 					<!-- Daily breakdown -->
 					<section class="panel">
 						<div class="panel-head">
@@ -85,42 +91,54 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 								Daily minimum { domain.FormatCentavos(summary.DailyFloor) } · commission { fmt.Sprintf("%d%%", domain.CommissionPercent) }
 							</p>
 						</div>
-						if len(summary.Days) == 0 {
-							<div class="empty-state">
-								<p>No working days in this range.</p>
-							</div>
-						} else {
-							<table class="data-table">
-								<thead>
-									<tr>
-										<th style="width: 180px;">Date</th>
-										<th style="width: 80px;">Cuts</th>
-										<th style="width: 130px;">List total</th>
-										<th style="width: 130px;">Commission</th>
-										<th style="width: 130px;">Paid</th>
-									</tr>
-								</thead>
-								<tbody>
-									for _, d := range summary.Days {
+
+						<div class="panel-body panel-body-flush">
+							if len(summary.Days) == 0 {
+								<div class="empty-state">
+									<p>No attendance records in this range.</p>
+								</div>
+							} else {
+								<table class="data-table">
+									<thead>
 										<tr>
-											<td>{ d.Date.Format("Mon, Jan 2") }</td>
-											<td class="data-mono">{ fmt.Sprintf("%d", d.HaircutCount) }</td>
-											<td>{ domain.FormatCentavos(d.ListTotal) }</td>
-											<td>{ domain.FormatCentavos(d.Commission) }</td>
-											<td>
-												<span class="data-strong">{ domain.FormatCentavos(d.Paid) }</span>
-												if d.FloorApplied {
-													<br/>
-													<small class="floor-tag">minimum applied</small>
-												}
-											</td>
+											<th style="width: 180px;">Date</th>
+											<th style="width: 80px;">Cuts</th>
+											<th style="width: 130px;">List total</th>
+											<th style="width: 130px;">Commission</th>
+											<th style="width: 130px;">Paid</th>
 										</tr>
-									}
-								</tbody>
-							</table>
-						}
+									</thead>
+									<tbody>
+										for _, d := range summary.Days {
+											if d.Absent {
+												<tr class="row-absent">
+													<td data-label="Date">{ d.Date.Format("Mon, Jan 2") }</td>
+													<td colspan="4">
+														<span class="absent-tag">absent</span>
+													</td>
+												</tr>
+											} else {
+												<tr>
+													<td data-label="Date">{ d.Date.Format("Mon, Jan 2") }</td>
+													<td class="data-mono" data-label="Cuts">{ fmt.Sprintf("%d", d.HaircutCount) }</td>
+													<td data-label="List total">{ domain.FormatCentavos(d.ListTotal) }</td>
+													<td data-label="Commission">{ domain.FormatCentavos(d.Commission) }</td>
+													<td data-label="Paid">
+														<span class="data-strong">{ domain.FormatCentavos(d.Paid) }</span>
+														if d.FloorApplied {
+															<br/><small class="floor-tag">minimum applied</small>
+														}
+													</td>
+												</tr>
+											}
+										}
+									</tbody>
+								</table>
+							}
+						</div>
 					</section>
-					<!-- Totals box -->
+
+					<!-- Totals -->
 					if len(summary.Days) > 0 {
 						<div class="totals-box">
 							<div class="totals-row">
@@ -137,6 +155,7 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 							</div>
 						</div>
 					}
+
 				</main>
 			</div>
 		</body>

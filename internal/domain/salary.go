@@ -12,6 +12,7 @@ type DailyEarning struct {
 	Paid         int  // max(Commission, Floor)
 	FloorApplied bool // true when Paid == Floor and Commission < Floor
 	Absent       bool // true when the barber was not marked present
+	Haircuts     []Haircut
 }
 
 // SalarySummary is the full breakdown for a date range.
@@ -107,6 +108,7 @@ func CalculateSalary(
 			Floor:        dailyFloorCentavos,
 			Paid:         paid,
 			FloorApplied: floorApplied,
+			Haircuts:     dayHaircuts,
 		})
 		summary.GrossSalary += paid
 	}

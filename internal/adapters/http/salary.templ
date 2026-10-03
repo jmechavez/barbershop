@@ -6,7 +6,13 @@ import (
 	"barbershop/internal/domain"
 )
 
-templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string, toStr string) {
+templ SalaryPage(
+	user domain.User,
+	summary domain.SalarySummary,
+	fromStr string,
+	toStr string,
+	serviceName map[int]string,
+) {
 	<!DOCTYPE html>
 	<html>
 		<head>
@@ -16,6 +22,7 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 			<meta name="theme-color" content="#000000"/>
 			<link rel="icon" type="image/png" href="/static/favicon.png"/>
 			<link rel="stylesheet" href="/static/style.css"/>
+			<script src="/static/app.js" defer></script>
 		</head>
 		<body class="app-page">
 			<div class="app-shell">
@@ -101,7 +108,7 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 								<table class="data-table">
 									<thead>
 										<tr>
-											<th style="width: 180px;">Date</th>
+											<th style="width: 200px;">Date</th>
 											<th style="width: 80px;">Cuts</th>
 											<th style="width: 130px;">List total</th>
 											<th style="width: 130px;">Commission</th>
@@ -109,17 +116,18 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 										</tr>
 									</thead>
 									<tbody>
-										for _, d := range summary.Days {
+										for i, d := range summary.Days {
 											if d.Absent {
 												<tr class="row-absent">
 													<td data-label="Date">{ d.Date.Format("Mon, Jan 2") }</td>
-													<td colspan="4">
-														<span class="absent-tag">absent</span>
-													</td>
+													<td colspan="4"><span class="absent-tag">absent</span></td>
 												</tr>
 											} else {
-												<tr>
-													<td data-label="Date">{ d.Date.Format("Mon, Jan 2") }</td>
+												<tr class="day-summary" data-day={ fmt.Sprintf("%d", i) }>
+													<td data-label="Date">
+														<span class="day-toggle">▸</span>
+														{ d.Date.Format("Mon, Jan 2") }
+													</td>
 													<td class="data-mono" data-label="Cuts">{ fmt.Sprintf("%d", d.HaircutCount) }</td>
 													<td data-label="List total">{ domain.FormatCentavos(d.ListTotal) }</td>
 													<td data-label="Commission">{ domain.FormatCentavos(d.Commission) }</td>
@@ -127,6 +135,45 @@ templ SalaryPage(user domain.User, summary domain.SalarySummary, fromStr string,
 														<span class="data-strong">{ domain.FormatCentavos(d.Paid) }</span>
 														if d.FloorApplied {
 															<br/><small class="floor-tag">minimum applied</small>
+														}
+													</td>
+												</tr>
+												<tr class="day-detail" data-day={ fmt.Sprintf("%d", i) } hidden>
+													<td colspan="5">
+														if len(d.Haircuts) == 0 {
+															<p class="day-detail-empty">No haircuts recorded on this day.</p>
+														} else {
+															<table class="day-detail-table">
+																<thead>
+																	<tr>
+																		<th style="width: 80px;">Time</th>
+																		<th>Service</th>
+																		<th style="width: 100px;">Price</th>
+																		<th style="width: 140px;">Discount</th>
+																		<th style="width: 100px;">Net</th>
+																	</tr>
+																</thead>
+																<tbody>
+																	for _, h := range d.Haircuts {
+																		<tr>
+																			<td class="data-mono">{ h.CreatedAt.Format("15:04") }</td>
+																			<td>{ serviceName[h.ServiceID] }</td>
+																			<td>{ domain.FormatCentavos(h.PriceCentavos) }</td>
+																			<td>
+																				if h.DiscountCentavos > 0 {
+																					{ domain.FormatCentavos(h.DiscountCentavos) }
+																					if h.DiscountReason != "" {
+																						<br/><small>({ h.DiscountReason })</small>
+																					}
+																				} else {
+																					<span class="data-dim">—</span>
+																				}
+																			</td>
+																			<td class="data-strong">{ domain.FormatCentavos(h.NetCentavos) }</td>
+																		</tr>
+																	}
+																</tbody>
+															</table>
 														}
 													</td>
 												</tr>

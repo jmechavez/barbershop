@@ -2387,3 +2387,74 @@ textarea.has-focus {
 		transition: none;
 	}
 }
+
+/* ============================================================
+   Salary — expandable day rows
+   ============================================================ */
+
+.day-summary {
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+.day-summary:hover {
+	background: rgba(214, 214, 218, 0.04);
+}
+
+.day-toggle {
+	display: inline-block;
+	width: 20px;
+	margin-right: 6px;
+	color: var(--text-dim);
+	font-size: 0.85em;
+	transition: transform 0.2s ease, color 0.15s ease;
+}
+.day-summary.open .day-toggle {
+	transform: rotate(90deg);
+	color: var(--silver-hi);
+}
+
+.day-detail td {
+	padding: 0 !important;
+	border-bottom: 1px solid var(--line);
+	background: rgba(0, 0, 0, 0.4);
+}
+
+.day-detail-inner {
+	padding: 16px 24px 20px;
+}
+
+.day-detail-empty {
+	margin: 0;
+	padding: 12px 24px;
+	color: var(--text-dim);
+	font-style: italic;
+	font-size: 0.95em;
+}
+
+.day-detail-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.95em;
+}
+
+.day-detail-table th {
+	text-align: left;
+	padding: 8px 12px;
+	font-size: 0.72em;
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+	border-bottom: 1px solid var(--line-hi);
+	background: transparent;
+}
+
+.day-detail-table td {
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--line);
+	color: var(--text);
+}
+
+.day-detail-table tr:last-child td {
+	border-bottom: none;
+}

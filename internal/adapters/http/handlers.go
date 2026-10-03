@@ -524,6 +524,7 @@ func (h *Handlers) AdminHaircutsPage(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) AdminSalariesPage(w http.ResponseWriter, r *http.Request) {
 	admin, _ := CurrentUser(r.Context())
 
+	// Barbers for the dropdown.
 	allUsers, err := h.Users.List(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -536,6 +537,18 @@ func (h *Handlers) AdminSalariesPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Service names for the expanded haircut list.
+	services, err := h.Services.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	serviceName := map[int]string{}
+	for _, s := range services {
+		serviceName[s.ID] = s.Name
+	}
+
+	// Date range.
 	now := time.Now()
 	fromStr := r.URL.Query().Get("from")
 	toStr := r.URL.Query().Get("to")
@@ -569,6 +582,7 @@ func (h *Handlers) AdminSalariesPage(w http.ResponseWriter, r *http.Request) {
 		selectedBarberID, _ = strconv.Atoi(barberStr)
 	}
 
+	// Which barbers to fetch summaries for?
 	var ids []int
 	if selectedBarberID > 0 {
 		ids = []int{selectedBarberID}
@@ -578,6 +592,7 @@ func (h *Handlers) AdminSalariesPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Fetch summaries.
 	summaries := map[int]domain.SalarySummary{}
 	if len(ids) > 0 {
 		summaries, err = h.Salary.ForAllRange(r.Context(), ids, from, toExclusive)
@@ -587,6 +602,7 @@ func (h *Handlers) AdminSalariesPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Look up selected barber's name.
 	selectedName := ""
 	if selectedBarberID > 0 {
 		for _, b := range barbers {
@@ -602,6 +618,7 @@ func (h *Handlers) AdminSalariesPage(w http.ResponseWriter, r *http.Request) {
 		fromStr, toStr,
 		selectedBarberID, selectedName,
 		summaries,
+		serviceName,
 	).Render(r.Context(), w)
 }
 
@@ -839,6 +856,18 @@ func (h *Handlers) MeSalaryPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Service names for the expanded haircut list.
+	services, err := h.Services.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	serviceName := map[int]string{}
+	for _, s := range services {
+		serviceName[s.ID] = s.Name
+	}
+
+	// Date range.
 	fromStr := r.URL.Query().Get("from")
 	toStr := r.URL.Query().Get("to")
 
@@ -872,5 +901,5 @@ func (h *Handlers) MeSalaryPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SalaryPage(user, summary, fromStr, toStr).Render(r.Context(), w)
+	SalaryPage(user, summary, fromStr, toStr, serviceName).Render(r.Context(), w)
 }

@@ -406,3 +406,23 @@
 		el.addEventListener('blur',  () => el.classList.remove('has-focus'));
 	});
 })();
+
+// 16. Salary pages — click a day to expand the haircut list.
+(function () {
+	const summaries = document.querySelectorAll('.day-summary');
+	if (!summaries.length) return;
+
+	summaries.forEach((row) => {
+		row.addEventListener('click', () => {
+			const day = row.getAttribute('data-day');
+			const detail = document.querySelector(
+				'.day-detail[data-day="' + day + '"]'
+			);
+			if (!detail) return;
+
+			const isOpen = !detail.hidden;
+			detail.hidden = isOpen;
+			row.classList.toggle('open', !isOpen);
+		});
+	});
+})();

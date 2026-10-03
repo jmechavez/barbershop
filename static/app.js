@@ -119,16 +119,66 @@
 	});
 })();
 
-// 8. Animate the total when it changes (htmx swap).
+// 8. Public page — animate the total number from old to new (htmx swap).
 (function () {
-	const amount = document.getElementById('total-amount');
-	if (!amount) return;
+	const el = document.getElementById('total-amount');
+	if (!el) return;
+
+	let currentValue = 0;
+	let rafId = null;
+	let animating = false;
+
+	function parsePesos(str) {
+		const cleaned = (str || '').replace(/[^\d-]/g, '');
+		const n = parseInt(cleaned, 10);
+		return isNaN(n) ? 0 : n;
+	}
+
+	function formatCentavos(centavos) {
+		const sign = centavos < 0 ? '-' : '';
+		const abs = Math.abs(centavos);
+		const whole = Math.floor(abs / 100);
+		const frac = abs % 100;
+		const wholeStr = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+		return sign + '₱' + wholeStr + '.' + String(frac).padStart(2, '0');
+	}
+
+	currentValue = parsePesos(el.textContent || '0');
+
+	function animateTo(target) {
+		if (rafId) cancelAnimationFrame(rafId);
+		const start = currentValue;
+		const delta = target - start;
+		if (delta === 0) return;
+
+		animating = true;
+		const duration = 800;
+		const t0 = performance.now();
+
+		function tick(now) {
+			const t = Math.min(1, (now - t0) / duration);
+			const eased = 1 - Math.pow(1 - t, 3);
+			const value = Math.round(start + delta * eased);
+			el.textContent = formatCentavos(value);
+			currentValue = value;
+			if (t < 1) {
+				rafId = requestAnimationFrame(tick);
+			} else {
+				rafId = null;
+				animating = false;
+			}
+		}
+		rafId = requestAnimationFrame(tick);
+	}
 
 	const mo = new MutationObserver(() => {
-		amount.style.transform = 'scale(1.08)';
-		setTimeout(() => { amount.style.transform = ''; }, 180);
+		if (animating) return; // ignore our own writes
+		const target = parsePesos(el.textContent || '0');
+		if (target !== currentValue) {
+			animateTo(target);
+		}
 	});
-	mo.observe(amount, { childList: true, characterData: true, subtree: true });
+	mo.observe(el, { childList: true, characterData: true, subtree: true });
 })();
 
 // 9. Mark body as loaded after page finishes (for skeleton loading).
@@ -176,19 +226,16 @@
 		if (cb) cb();
 	});
 
-	// Close on backdrop click
 	modal.addEventListener('click', (e) => {
 		if (e.target === modal) closeConfirm();
 	});
 
-	// Close on Escape key
 	document.addEventListener('keydown', (e) => {
 		if (e.key === 'Escape' && modal.classList.contains('open')) {
 			closeConfirm();
 		}
 	});
 
-	// Expose a global so other scripts can trigger
 	window.drftConfirm = openConfirm;
 })();
 
@@ -199,21 +246,15 @@
 		if (!target) return;
 		if (!window.drftConfirm) return;
 
-		// Only intercept if it's a submit button or a link we want to confirm.
 		e.preventDefault();
 		e.stopPropagation();
 
 		const message = target.getAttribute('data-confirm') || 'Are you sure?';
 
 		window.drftConfirm(message, () => {
-			// Remove the class and re-trigger the click so the original action runs.
 			target.classList.remove('js-confirm');
 			target.click();
-
-			// Restore the class so future clicks still get confirmed.
-			setTimeout(() => {
-				target.classList.add('js-confirm');
-			}, 100);
+			setTimeout(() => target.classList.add('js-confirm'), 100);
 		});
 	}, true);
 })();
@@ -274,14 +315,12 @@
 		totalPaidEl.textContent = pesos(paid);
 		remainingEl.textContent = pesos(remaining);
 
-		// Card "has-value" state
 		payInputs.forEach((inp) => {
 			const card = inp.closest('.pay-card');
 			const v = parseInt(inp.value || '0', 10);
 			card.classList.toggle('has-value', !isNaN(v) && v > 0);
 		});
 
-		// Totals box state
 		totalsBox.classList.remove('complete', 'short', 'over');
 		if (remaining === 0 && net > 0) {
 			totalsBox.classList.add('complete');
@@ -292,12 +331,10 @@
 		}
 	}
 
-	// Wire up events
 	if (serviceSelect) serviceSelect.addEventListener('change', update);
 	if (discountInput) discountInput.addEventListener('input', update);
 	payInputs.forEach((inp) => inp.addEventListener('input', update));
 
-	// Initial state
 	update();
 })();
 
@@ -317,17 +354,7 @@
 		input.value = s;
 	}
 
-	// Set on page load
 	setNow();
-
-	// If the barber needs to log another haircut after submitting,
-	// reset to "now" on form focus so the field isn't stuck at the previous value.
-	// (Optional — uncomment if you want it.)
-
-	// const form = document.getElementById('counter-form');
-	// form.addEventListener('submit', () => {
-	// 	setTimeout(setNow, 100);
-	// });
 })();
 
 // 14. Counter — quick discount buttons.
@@ -353,17 +380,29 @@
 			} else if (action === 'free') {
 				discountInput.value = String(servicePesos());
 			} else {
-				// numeric discount (e.g. "50")
 				const n = parseInt(action, 10);
 				discountInput.value = String(isNaN(n) ? 0 : n);
 			}
 
-			// Trigger the input event so the live totals update.
 			discountInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-			// Focus the field so the barber can adjust if needed.
 			discountInput.focus();
 			discountInput.select();
 		});
+	});
+})();
+
+// 15. App pages — animated focus ring on inputs.
+// Adds a soft glow to the outline when the field is focused,
+// using a CSS class so the styling lives in style.css.
+(function () {
+	const selectors = [
+		'input:not([type="checkbox"]):not([type="radio"])',
+		'select',
+		'textarea',
+	].join(',');
+
+	document.querySelectorAll(selectors).forEach((el) => {
+		el.addEventListener('focus', () => el.classList.add('has-focus'));
+		el.addEventListener('blur',  () => el.classList.remove('has-focus'));
 	});
 })();

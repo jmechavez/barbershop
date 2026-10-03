@@ -20,6 +20,11 @@
 
 * { box-sizing: border-box; }
 
+/* Force-hidden rows stay hidden, even inside display:block tables on mobile */
+[hidden] {
+	display: none !important;
+}
+
 html {
 	scrollbar-gutter: stable;
 	background: var(--bg);
@@ -28,7 +33,7 @@ html {
 body {
 	margin: 0;
 	padding: 0;
-	background: transparent;;
+	background: transparent;
 	color: var(--text);
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 	font-size: 19px;
@@ -810,7 +815,7 @@ input, select, textarea {
 	margin-left: 8px;
 	text-transform: none;
 	letter-spacing: 0;
-	transition: border-color 0.15s ease;
+	transition: border-color 0.15s ease, box-shadow 0.25s ease;
 }
 input:focus, select:focus, textarea:focus {
 	outline: none;
@@ -818,6 +823,16 @@ input:focus, select:focus, textarea:focus {
 }
 input[type=number] { width: 120px; }
 input[type=date]   { width: 180px; }
+
+/* Animated focus ring */
+input.has-focus,
+select.has-focus,
+textarea.has-focus {
+	border-color: var(--silver-hi);
+	box-shadow:
+		0 0 0 1px var(--silver-hi),
+		0 0 16px -4px rgba(214, 214, 218, 0.35);
+}
 
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
@@ -1240,6 +1255,74 @@ small { color: var(--text-dim); font-size: 0.9em; }
 	border: 1px solid var(--line-hi);
 	border-radius: 2px;
 	opacity: 0.8;
+}
+
+/* ============================================================
+   Salary — expandable day rows
+   ============================================================ */
+
+.day-summary {
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+.day-summary:hover {
+	background: rgba(214, 214, 218, 0.04);
+}
+
+.day-toggle {
+	display: inline-block;
+	width: 20px;
+	margin-right: 6px;
+	color: var(--text-dim);
+	font-size: 0.85em;
+	transition: transform 0.2s ease, color 0.15s ease;
+}
+.day-summary.open .day-toggle {
+	transform: rotate(90deg);
+	color: var(--silver-hi);
+}
+
+.day-detail td {
+	padding: 0 !important;
+	border-bottom: 1px solid var(--line);
+	background: rgba(0, 0, 0, 0.4);
+}
+
+.day-detail-empty {
+	margin: 0;
+	padding: 16px 24px;
+	color: var(--text-dim);
+	font-style: italic;
+	font-size: 0.95em;
+}
+
+.day-detail-table {
+	width: calc(100% - 48px);
+	margin: 16px 24px 20px;
+	border-collapse: collapse;
+	font-size: 0.95em;
+}
+
+.day-detail-table th {
+	text-align: left;
+	padding: 8px 12px;
+	font-size: 0.72em;
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+	border-bottom: 1px solid var(--line-hi);
+	background: transparent;
+}
+
+.day-detail-table td {
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--line);
+	color: var(--text);
+}
+
+.day-detail-table tr:last-child td {
+	border-bottom: none;
 }
 
 /* ============================================================
@@ -2024,6 +2107,12 @@ body.loaded .skeleton-only { opacity: 0; }
 	}
 
 	.scroll-progress { display: none; }
+
+	input.has-focus,
+	select.has-focus,
+	textarea.has-focus {
+		transition: none;
+	}
 }
 
 /* ============================================================
@@ -2051,7 +2140,7 @@ body.loaded .skeleton-only { opacity: 0; }
 
 @media (max-width: 720px) {
 	html, body { font-size: 17px; }
-	html::before { opacity: 0.4; }
+	html::before { opacity: 0.2; }
 
 	/* Nav */
 	.nav-band {
@@ -2270,6 +2359,46 @@ body.loaded .skeleton-only { opacity: 0; }
 		text-align: right;
 	}
 
+	/* Day detail on mobile — nested table becomes a stack of mini-cards */
+	.day-detail td {
+		background: transparent;
+	}
+	.day-detail-table {
+		width: 100%;
+		margin: 8px 0 0;
+		border: none;
+	}
+	.day-detail-table thead { display: none; }
+	.day-detail-table tbody tr {
+		display: block;
+		background: rgba(0, 0, 0, 0.5);
+		border: 1px solid var(--line);
+		border-radius: 4px;
+		margin-bottom: 8px;
+		padding: 12px 14px;
+	}
+	.day-detail-table tbody td {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+		padding: 4px 0;
+		border: none;
+		font-size: 0.95em;
+	}
+	.day-detail-table tbody td:first-child::before { content: "Time"; }
+	.day-detail-table tbody td:nth-child(2)::before { content: "Service"; }
+	.day-detail-table tbody td:nth-child(3)::before { content: "Price"; }
+	.day-detail-table tbody td:nth-child(4)::before { content: "Discount"; }
+	.day-detail-table tbody td:nth-child(5)::before { content: "Net"; }
+	.day-detail-table tbody td::before {
+		font-size: 0.75em;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: var(--text-dim);
+	}
+
 	/* Inline forms */
 	.inline-form { gap: 14px; }
 	.inline-label { flex: 1 1 100%; font-size: 0.9em; }
@@ -2363,98 +2492,4 @@ body.loaded .skeleton-only { opacity: 0; }
 	.svc-name { font-size: 1.15em; }
 	.svc-price { font-size: 1.35em; }
 	.total-bar .amount { font-size: 1.7em; }
-}
-
-/* ============================================================
-   Animated focus ring
-   ============================================================ */
-
-input.has-focus,
-select.has-focus,
-textarea.has-focus {
-	border-color: var(--silver-hi);
-	box-shadow:
-		0 0 0 1px var(--silver-hi),
-		0 0 16px -4px rgba(214, 214, 218, 0.35);
-	transition: border-color 0.15s ease, box-shadow 0.25s ease;
-}
-
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-	input.has-focus,
-	select.has-focus,
-	textarea.has-focus {
-		transition: none;
-	}
-}
-
-/* ============================================================
-   Salary — expandable day rows
-   ============================================================ */
-
-.day-summary {
-	cursor: pointer;
-	transition: background 0.15s ease;
-}
-.day-summary:hover {
-	background: rgba(214, 214, 218, 0.04);
-}
-
-.day-toggle {
-	display: inline-block;
-	width: 20px;
-	margin-right: 6px;
-	color: var(--text-dim);
-	font-size: 0.85em;
-	transition: transform 0.2s ease, color 0.15s ease;
-}
-.day-summary.open .day-toggle {
-	transform: rotate(90deg);
-	color: var(--silver-hi);
-}
-
-.day-detail td {
-	padding: 0 !important;
-	border-bottom: 1px solid var(--line);
-	background: rgba(0, 0, 0, 0.4);
-}
-
-.day-detail-inner {
-	padding: 16px 24px 20px;
-}
-
-.day-detail-empty {
-	margin: 0;
-	padding: 12px 24px;
-	color: var(--text-dim);
-	font-style: italic;
-	font-size: 0.95em;
-}
-
-.day-detail-table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: 0.95em;
-}
-
-.day-detail-table th {
-	text-align: left;
-	padding: 8px 12px;
-	font-size: 0.72em;
-	font-weight: 700;
-	letter-spacing: 0.18em;
-	text-transform: uppercase;
-	color: var(--text-dim);
-	border-bottom: 1px solid var(--line-hi);
-	background: transparent;
-}
-
-.day-detail-table td {
-	padding: 10px 12px;
-	border-bottom: 1px solid var(--line);
-	color: var(--text);
-}
-
-.day-detail-table tr:last-child td {
-	border-bottom: none;
 }

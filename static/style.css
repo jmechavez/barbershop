@@ -1260,12 +1260,14 @@ small {
     color: var(--text-dim);
     font: inherit;
     letter-spacing: inherit;
+    text-transform: inherit;
     cursor: pointer;
     padding: 0;
     font-size: 1em;
 }
 
 .app-nav-user button:hover {
+    background: transparent;
     color: var(--silver-hi);
 }
 
